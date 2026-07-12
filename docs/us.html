@@ -38,6 +38,11 @@
   .fbtn{background:var(--card);border:1px solid var(--line);border-radius:8px;
     padding:6px 12px;cursor:pointer;font-size:12px;color:var(--sub);user-select:none}
   .fbtn.on{border-color:var(--accent);color:var(--accent);background:#101b28}
+  .fsearch{background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;font-size:12px;color:var(--txt);width:190px;outline:none}
+  .fsearch:focus{border-color:var(--accent)}
+  td a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--sub)}
+  td a:hover{color:var(--accent);border-bottom-color:var(--accent)}
   .fcount{color:var(--sub);font-size:12px;margin-left:auto}
   .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
   table{border-collapse:collapse;width:100%;font-size:11.5px;min-width:0}
@@ -86,6 +91,7 @@
 
   <div class="filters" id="filters">
     <span class="flabel">필터:</span>
+    <input class="fsearch" id="fsearch" type="text" placeholder="🔎 심볼·종목명 검색" autocomplete="off">
     <span class="fbtn" data-f="top10">★ 상위 10%만</span>
     <span class="fbtn" data-f="m12pos">12-1모멘텀 +</span>
     <span class="fbtn" data-f="up60">상승일 ≥ 60%</span>
@@ -108,7 +114,7 @@
 // 표시 컬럼: [CSV키, 라벨, 타입, 툴팁]
 const COLS = [
   ['rank','#','int','그날 점수 순위'],
-  ['symbol','심볼','str',''],
+  ['symbol','심볼','sym','클릭하면 Yahoo Finance 차트'],
   ['name','종목명','str',''],
   ['score','점수','score','mom12+상승일비율+size 순위합(0~3). 높을수록 선호. 같은 날 순위가 핵심'],
   ['mom12_pct','12-1모멘텀%','signed','12개월 전 → 1개월 전 수익률(최근 1개월 제외)'],
@@ -122,7 +128,7 @@ const COLS = [
   ['mktcap_busd','시총$B','num2','순환 수집 시총(최대 ~2주 전 값, 참고)'],
 ];
 
-let sortKey='rank', sortAsc=true, allRows=[], activeF=new Set();
+let sortKey='rank', sortAsc=true, allRows=[], activeF=new Set(), query='';
 
 const FILTERS = {
   top10:  r => parseInt(r['top10pct']) === 1,
@@ -134,10 +140,13 @@ const FILTERS = {
 };
 
 function applyFilters(){
-  const rows = allRows.filter(r => [...activeF].every(f => {
-    const fn = FILTERS[f]; if(!fn) return true;
-    return fn(r) === true;
-  }));
+  const q = query.trim().toUpperCase();
+  const rows = allRows.filter(r =>
+    (!q || (r['symbol']||'').toUpperCase().includes(q) || (r['name']||'').toUpperCase().includes(q))
+    && [...activeF].every(f => {
+      const fn = FILTERS[f]; if(!fn) return true;
+      return fn(r) === true;
+    }));
   render(rows);
   const fc = document.getElementById('fcount');
   if(fc) fc.textContent = activeF.size
@@ -153,6 +162,8 @@ function fmt(v, type){
   if(type==='num2'){const n=parseFloat(v);return isNaN(n)?'-':n.toFixed(2)}
   if(type==='signed'){const n=parseFloat(v);if(isNaN(n))return '-';
     return '<span class="'+(n>=0?'pos':'neg')+'">'+(n>=0?'+':'')+n.toFixed(1)+'</span>'}
+  if(type==='sym') return '<a href="https://finance.yahoo.com/quote/'+encodeURIComponent(v)+
+    '" target="_blank" rel="noopener">'+v+'</a>';
   return v;
 }
 
@@ -207,6 +218,10 @@ fetch('data/us_latest.csv?ts='+Date.now())
       '<tr><td colspan="16" class="loading">데이터 없음 (data/us_latest.csv) — 첫 Actions 실행 후 생성됩니다</td></tr>';
   });
 
+document.getElementById('fsearch').addEventListener('input', e=>{
+  query = e.target.value;
+  applyFilters();
+});
 document.querySelectorAll('.fbtn').forEach(b=>b.onclick=()=>{
   const f=b.dataset.f;
   if(activeF.has(f)){activeF.delete(f); b.classList.remove('on');}

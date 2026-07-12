@@ -86,16 +86,14 @@ def build_message():
         names = {sym.replace(".", "-"): (nm or "")[:28] for sym, nm in s.execute(
             "SELECT symbol,name FROM listing_daily WHERE date=(SELECT MAX(date) FROM listing_daily)")}
         s.close()
-    lines = ["🧪 <b>[US 테스트·관측]</b> mom12+상승일비율+size 기움 상위",
-             f"기준일 {ds[i]} · 유니버스 {len(score):,} (가드 $5·$1M)", ""]
-    for r, (sym, sc) in enumerate(top.items(), 1):
-        lines.append(f" {r}. <b>{sym}</b> {sc:.2f} · 12-1모멘텀 {F.at[sym,'mom12']*100:+.0f}%"
-                     f" · 상승일 {F.at[sym,'upratio63']*100:.0f}%"
-                     f" — {names.get(sym, '')}")
-    lines += ["", f"📊 전체 표(정렬·필터): {PAGE_URL}",
-              "", "⚠️ <b>매수신호 아님</b> — in-sample 가설(생존편향 미보정), PREREGISTER·OOS",
-              "판정 전 순수 관측. 근거: research/RESEARCH_us_first_scan_20260712.md"]
-    return "\n".join(lines)
+    # 메시지는 순위만 간결히 — 점수·모멘텀 등 상세는 페이지에서 (2026-07-12 요청)
+    lines = ["🧪 <b>[US 테스트·관측]</b> 오늘의 상위 10",
+             f"기준일 {ds[i]} · 유니버스 {len(score):,}", ""]
+    for r, (sym, _sc) in enumerate(top.items(), 1):
+        lines.append(f"{r:2d}. <b>{sym}</b> — {names.get(sym, '')}")
+    lines += ["", f"📊 점수·모멘텀·필터 상세: {PAGE_URL}",
+              "", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]
+    return "\n".join(lines), ds[i]
 
 
 def send(msg):
@@ -119,10 +117,21 @@ def main():
     if not OHLCV_DB.exists():
         print(f"us_ohlcv.db 없음({OHLCV_DB}) — 생략(비치명).")
         return
-    msg = build_message()
+    msg, latest = build_message()
     print(msg)
-    if not args.dry_run:
-        send(msg)
+    if args.dry_run:
+        return
+    # ── 휴장일 가드 ──────────────────────────────────────────────────
+    # 미국 공휴일에도 cron 은 돌지만 새 데이터가 없어 '전날 기준일' 중복 알림이
+    # 나가는 구멍(2026-07-12 발견). 최신 데이터 날짜 != 오늘(ET)이면 휴장으로
+    # 보고 전송 생략. 수동 실행(workflow_dispatch)은 TELEGRAM_FORCE=1 로 항상 전송.
+    import datetime as _dt
+    from zoneinfo import ZoneInfo
+    today_et = _dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y%m%d")
+    if os.environ.get("TELEGRAM_FORCE", "").strip() != "1" and latest != today_et:
+        print(f"⏭ 휴장일 추정(최신 {latest} ≠ 오늘 ET {today_et}) — 전송 생략.")
+        return
+    send(msg)
 
 
 if __name__ == "__main__":

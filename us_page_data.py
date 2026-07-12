@@ -30,6 +30,8 @@ OHLCV_DB = DATA_DIR / "us_ohlcv.db"
 SEED_DB = DATA_DIR / "us_seed.db"
 OUT = HERE / "docs" / "data" / "us_latest.csv"
 LOOKBACK = 260  # mom12(252) + 여유
+# 관측 적재용 모델 id — 점수식이 바뀌면 새 id 로 (기존 기록 불변, 매직넘버·소급수정 금지)
+MODEL_ID = "us_mus_v0"  # mom12 + upratio63 + size_amt 순위합 (2026-07-12 첫 배선)
 
 
 def main():
@@ -125,6 +127,29 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(OUT, index=False, encoding="utf-8-sig")
     print(f"저장: {OUT} · {len(out):,}종목 · 기준일 {ds[i]}")
+
+    # ── 관측 적재: score_daily (가중치 0 — 기록만) ─────────────────────
+    # 왜: CSV 는 덮어쓰기라, 본구축(9월~) OOS 판정 때 '그날 점수 → 이후 수익'
+    # 매칭이 필요하다. 한국판 history.db 역할. INSERT OR IGNORE = idempotent.
+    wcon = sqlite3.connect(OHLCV_DB)
+    wcon.execute("""CREATE TABLE IF NOT EXISTS score_daily (
+        model TEXT NOT NULL, date TEXT NOT NULL, symbol TEXT NOT NULL,
+        rank INTEGER, score REAL, mom12 REAL, upratio63 REAL, size_amt REAL,
+        PRIMARY KEY (model, date, symbol))""")
+    rows_sd = []
+    for rk, (sym, sc) in enumerate(score.items(), 1):
+        rows_sd.append((MODEL_ID, ds[i], sym, rk, float(sc),
+                        None if pd.isna(F.at[sym, "mom12"]) else float(F.at[sym, "mom12"]),
+                        None if pd.isna(F.at[sym, "upratio63"]) else float(F.at[sym, "upratio63"]),
+                        None if pd.isna(F.at[sym, "size_amt"]) else float(F.at[sym, "size_amt"])))
+    cur = wcon.executemany(
+        "INSERT OR IGNORE INTO score_daily VALUES (?,?,?,?,?,?,?,?)", rows_sd)
+    wcon.commit()
+    n_total = wcon.execute("SELECT COUNT(*), COUNT(DISTINCT date) FROM score_daily "
+                           "WHERE model=?", (MODEL_ID,)).fetchone()
+    wcon.close()
+    print(f"score_daily 적재: 신규 {cur.rowcount}행 · 누적 {n_total[0]:,}행/{n_total[1]}일 "
+          f"(model={MODEL_ID})")
 
 
 if __name__ == "__main__":

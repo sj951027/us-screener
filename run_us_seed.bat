@@ -10,5 +10,11 @@ echo ========================================================================
 python us_seed_collector.py
 
 echo.
-echo   Done: %DATE% %TIME%   (data: ..\us-screener-data\us_seed.db)
+echo ========================================================================
+echo   US ohlcv incremental (daily prices, ~10-20 min for full universe)
+echo ========================================================================
+python us_ohlcv_collector.py
+
+echo.
+echo   Done: %DATE% %TIME%   (data: ..\us-screener-data\)
 echo ========================================================================

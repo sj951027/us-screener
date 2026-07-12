@@ -1,0 +1,24 @@
+# 비밀키
+.env
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 데이터 산출물 — 원본은 ../us-screener-data/ (repo 밖). 안전장치로 db도 차단.
+*.db
+*.db.gz
+/us-screener-data/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 임시
+*.bak
+_t_*

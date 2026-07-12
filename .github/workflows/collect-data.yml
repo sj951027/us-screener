@@ -45,6 +45,13 @@ jobs:
           python us_rotate_collector.py
           python us_short_collector.py
 
+      - name: Telegram test notice (관측 표시 — 매수신호 아님)
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python us_notify_test.py
+
       - name: Upload data store
         env:
           GH_TOKEN: ${{ github.token }}

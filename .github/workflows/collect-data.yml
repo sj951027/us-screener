@@ -45,6 +45,18 @@ jobs:
           python us_rotate_collector.py
           python us_short_collector.py
 
+      - name: Build page data (docs/data/us_latest.csv)
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+        run: python us_page_data.py
+
+      - name: Commit page data (GitHub Pages 갱신)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/us_latest.csv
+          git diff --cached --quiet || (git commit -m "data: us_latest 자동 갱신" && git pull --rebase && git push)
+
       - name: Telegram test notice (관측 표시 — 매수신호 아님)
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data

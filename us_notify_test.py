@@ -33,6 +33,7 @@ OHLCV_DB = DATA_DIR / "us_ohlcv.db"
 SEED_DB = DATA_DIR / "us_seed.db"
 TOP_N = 10
 LOOKBACK = 260   # mom12(252) + 여유
+PAGE_URL = "https://sj951027.github.io/us-screener/us.html"  # 전체 표(GitHub Pages)
 
 
 def build_message():
@@ -91,7 +92,8 @@ def build_message():
         lines.append(f" {r}. <b>{sym}</b> {sc:.2f} · 12-1모멘텀 {F.at[sym,'mom12']*100:+.0f}%"
                      f" · 상승일 {F.at[sym,'upratio63']*100:.0f}%"
                      f" — {names.get(sym, '')}")
-    lines += ["", "⚠️ <b>매수신호 아님</b> — in-sample 가설(생존편향 미보정), PREREGISTER·OOS",
+    lines += ["", f"📊 전체 표(정렬·필터): {PAGE_URL}",
+              "", "⚠️ <b>매수신호 아님</b> — in-sample 가설(생존편향 미보정), PREREGISTER·OOS",
               "판정 전 순수 관측. 근거: research/RESEARCH_us_first_scan_20260712.md"]
     return "\n".join(lines)
 

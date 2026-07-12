@@ -16,5 +16,18 @@ echo ========================================================================
 python us_ohlcv_collector.py
 
 echo.
+echo ========================================================================
+echo   US market series + rotate snapshot (indices/VIX + mcap 600/day)
+echo ========================================================================
+python us_market_series.py
+python us_rotate_collector.py
+
+echo.
+echo ========================================================================
+echo   FINRA short interest (biweekly files, probe recent window)
+echo ========================================================================
+python us_short_collector.py
+
+echo.
 echo   Done: %DATE% %TIME%   (data: ..\us-screener-data\)
 echo ========================================================================

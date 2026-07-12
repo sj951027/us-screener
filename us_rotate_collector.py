@@ -41,10 +41,13 @@ def load_symbols():
         raise SystemExit(f"us_seed.db 없음({SEED_DB}) — 먼저 python us_seed_collector.py")
     con = sqlite3.connect(f"file:{SEED_DB}?mode=ro", uri=True)
     last = con.execute("SELECT MAX(date) FROM listing_daily").fetchone()[0]
-    syms = [s for (s,) in con.execute(
-        "SELECT symbol FROM listing_daily WHERE date=? AND (etf IS NULL OR etf!='Y')",
-        (last,))]
+    rows = con.execute(
+        "SELECT symbol, name FROM listing_daily WHERE date=? AND (etf IS NULL OR etf!='Y')",
+        (last,)).fetchall()
     con.close()
+    BAD = ("WARRANT", " UNIT", "UNITS", " RIGHT", "RIGHTS")  # 야후 시세 없음(실측)
+    syms = [s for s, n in rows
+            if not any(b in (n or "").upper() for b in BAD)]
     return sorted({s.replace(".", "-").replace("$", "-P") for s in syms if s.isascii()})
 
 

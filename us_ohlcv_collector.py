@@ -56,10 +56,15 @@ def load_symbols():
         raise SystemExit(f"us_seed.db 없음({SEED_DB}) — 먼저 python us_seed_collector.py")
     con = sqlite3.connect(f"file:{SEED_DB}?mode=ro", uri=True)
     last = con.execute("SELECT MAX(date) FROM listing_daily").fetchone()[0]
-    syms = [s for (s,) in con.execute(
-        "SELECT symbol FROM listing_daily WHERE date=? AND (etf IS NULL OR etf!='Y')",
-        (last,))]
+    rows = con.execute(
+        "SELECT symbol, name FROM listing_daily WHERE date=? AND (etf IS NULL OR etf!='Y')",
+        (last,)).fetchall()
     con.close()
+    # 워런트·유닛·라이츠 제외 — 야후에 시세 없음(2026-07-12 백필 실측: -U/-W/-R 404).
+    #   심볼 접미사로 자르면 BRK-B 같은 정상 클래스주가 다치므로 '증권명 키워드'로 거른다.
+    BAD = ("WARRANT", " UNIT", "UNITS", " RIGHT", "RIGHTS")
+    syms = [s for s, n in rows
+            if not any(b in (n or "").upper() for b in BAD)]
     # yfinance 표기: 우선주 등 '$'·'.' 계열 → '-' (예: BRK.B → BRK-B)
     return sorted({s.replace(".", "-").replace("$", "-P") for s in syms if s.isascii()})
 
@@ -101,6 +106,8 @@ def fetch_chunk(symbols, start=None, period=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backfill", action="store_true", help="3년 백필(재개 가능)")
+    ap.add_argument("--retry-empty", action="store_true",
+                    help="완료표시됐지만 데이터 0인 심볼 재시도(rate limit 구멍 메움)")
     ap.add_argument("--limit", type=int, default=0, help="이번 실행 최대 심볼 수(테스트/분할용)")
     args = ap.parse_args()
     try:
@@ -117,12 +124,19 @@ def main():
     symbols = load_symbols()
     print(f"[유니버스] ETF 제외 {len(symbols)}심볼 (us_seed 최신 목록)")
 
-    if args.backfill:
+    if args.backfill or args.retry_empty:
         done = {s for (s,) in con.execute("SELECT symbol FROM backfill_done")}
-        todo = [s for s in symbols if s not in done]
+        if args.retry_empty:
+            # rate limit 등으로 '완료 표시됐지만 데이터 0'인 심볼 재시도
+            #   (2026-07-12 백필 실측: PTCT 가 rate limit 에 걸린 채 done 처리됨)
+            have = {s for (s,) in con.execute("SELECT DISTINCT symbol FROM daily_ohlcv")}
+            todo = [s for s in symbols if s in done and s not in have]
+        else:
+            todo = [s for s in symbols if s not in done]
         if args.limit:
             todo = todo[:args.limit]
-        print(f"[백필] 남은 {len(todo)}심볼 (완료 {len(done)}). 중단돼도 재실행하면 이어받음.")
+        print(f"[백필{'·재시도' if args.retry_empty else ''}] 남은 {len(todo)}심볼 "
+              f"(완료 {len(done)}). 중단돼도 재실행하면 이어받음.")
         start = (dt.date.today() - dt.timedelta(days=365 * BACKFILL_YEARS)).isoformat()
         total = 0
         for i in range(0, len(todo), CHUNK):

@@ -48,10 +48,13 @@
   table{border-collapse:collapse;width:100%;font-size:11.5px;min-width:0}
   th,td{padding:6px 7px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
   th{background:var(--card);color:var(--sub);font-weight:600;position:sticky;top:0;cursor:pointer}
-  th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:left}
+  th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),
+  th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){text-align:left}
   .top10row td{background:#101b28}
   .top10row td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
-  .top10row td:nth-child(4){color:var(--accent);font-weight:700}
+  .top10row td:nth-child(6){color:var(--accent);font-weight:700}
+  .badge{font-size:10px;color:var(--accent);border:1px solid var(--accent);
+    border-radius:4px;padding:0 4px;opacity:.85}
   tr:hover td{background:#1b1f28}
   .score{color:var(--accent);font-weight:700}
   .pos{color:var(--good)} .neg{color:var(--bad)}
@@ -98,6 +101,7 @@
     <span class="fbtn" data-f="m1pos">1개월 상승</span>
     <span class="fbtn" data-f="big">거래대금 ≥ $10M</span>
     <span class="fbtn" data-f="nearhi">52주고점 −15% 이내</span>
+    <span class="fbtn" data-f="sp500">S&amp;P500만</span>
     <span class="fcount" id="fcount"></span>
   </div>
 
@@ -116,6 +120,8 @@ const COLS = [
   ['rank','#','int','그날 점수 순위'],
   ['symbol','심볼','sym','클릭하면 Yahoo Finance 차트'],
   ['name','종목명','str',''],
+  ['sector','업종','str','yfinance 섹터(순환 수집 — 첫 2주는 일부 빈칸 정상)'],
+  ['idx','지수','badge','S&P500·NDX100 소속(참고 — 점수 미포함)'],
   ['score','점수','score','mom12+상승일비율+size 순위합(0~3). 높을수록 선호. 같은 날 순위가 핵심'],
   ['mom12_pct','12-1모멘텀%','signed','12개월 전 → 1개월 전 수익률(최근 1개월 제외)'],
   ['upratio63_pct','상승일%','num1','최근 63거래일 중 상승일 비율 — 꾸준함(양 시장 재현 팩터)'],
@@ -137,12 +143,14 @@ const FILTERS = {
   m1pos:  r => parseFloat(r['ret_1m_pct']) > 0,
   big:    r => parseFloat(r['amt20_musd']) >= 10,
   nearhi: r => parseFloat(r['dd52w_pct']) >= -15,
+  sp500:  r => (r['idx']||'').includes('SP500'),
 };
 
 function applyFilters(){
   const q = query.trim().toUpperCase();
   const rows = allRows.filter(r =>
-    (!q || (r['symbol']||'').toUpperCase().includes(q) || (r['name']||'').toUpperCase().includes(q))
+    (!q || (r['symbol']||'').toUpperCase().includes(q) || (r['name']||'').toUpperCase().includes(q)
+        || (r['sector']||'').toUpperCase().includes(q))
     && [...activeF].every(f => {
       const fn = FILTERS[f]; if(!fn) return true;
       return fn(r) === true;
@@ -164,6 +172,7 @@ function fmt(v, type){
     return '<span class="'+(n>=0?'pos':'neg')+'">'+(n>=0?'+':'')+n.toFixed(1)+'</span>'}
   if(type==='sym') return '<a href="https://finance.yahoo.com/quote/'+encodeURIComponent(v)+
     '" target="_blank" rel="noopener">'+v+'</a>';
+  if(type==='badge') return v ? '<span class="badge">'+v+'</span>' : '<span class="dim">-</span>';
   return v;
 }
 

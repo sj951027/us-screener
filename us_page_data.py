@@ -52,6 +52,12 @@ def main():
             "AND market_cap IS NOT NULL"))
     except sqlite3.OperationalError:
         mcap = {}
+    # 섹터(순환 수집 캐시 — 첫 바퀴 동안은 일부 결측 정상)
+    try:
+        sectors = dict(con.execute(
+            "SELECT symbol, sector FROM sector_cache WHERE sector IS NOT NULL"))
+    except sqlite3.OperationalError:
+        sectors = {}
     con.close()
     for c in ("close", "adj_close", "volume"):
         raw[c] = pd.to_numeric(raw[c], errors="coerce")
@@ -99,17 +105,32 @@ def main():
     hi252 = C.loc[idx, ds[i - 251]: ds[i]].max(axis=1)
     dd52 = (C.loc[idx, ds[i]] / hi252 - 1) * 100
 
-    names = {}
+    names, member = {}, {}
     if SEED_DB.exists():
         s = sqlite3.connect(f"file:{SEED_DB}?mode=ro", uri=True)
         names = {sym.replace(".", "-"): (nm or "") for sym, nm in s.execute(
             "SELECT symbol,name FROM listing_daily WHERE date=(SELECT MAX(date) FROM listing_daily)")}
+        # 지수 소속 뱃지 (S&P500·NDX100 — 판단축, 점수 미포함)
+        try:
+            for idx_name, sym in s.execute(
+                    "SELECT idx, symbol FROM index_membership "
+                    "WHERE date=(SELECT MAX(date) FROM index_membership)"):
+                member.setdefault(sym.replace(".", "-"), set()).add(idx_name)
+        except sqlite3.OperationalError:
+            pass
         s.close()
+
+    def badge(sym):
+        m = member.get(sym, set())
+        parts = (["SP500"] if "SP500" in m else []) + (["NDX"] if "NDX100" in m else [])
+        return "·".join(parts)
 
     out = pd.DataFrame({
         "rank": range(1, len(score) + 1),
         "symbol": idx,
         "name": [names.get(s, "").replace(",", " ")[:40] for s in idx],
+        "sector": [sectors.get(s, "").replace(",", " ") for s in idx],
+        "idx": [badge(s) for s in idx],
         "score": score.round(3).values,
         "mom12_pct": (F.loc[idx, "mom12"] * 100).round(1).values,
         "upratio63_pct": (F.loc[idx, "upratio63"] * 100).round(1).values,

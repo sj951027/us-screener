@@ -33,6 +33,10 @@ DDL = [
         symbol TEXT NOT NULL, date TEXT NOT NULL,
         market_cap REAL, shares REAL, PRIMARY KEY (symbol, date))""",
     "CREATE TABLE IF NOT EXISTS rotate_state (k TEXT PRIMARY KEY, v INTEGER)",
+    # 섹터 캐시(2026-07-12) — 페이지 판단축용. 섹터는 거의 안 변하므로 캐시에 없는
+    # 심볼만 1회 조회(첫 바퀴 ~12일에 채워짐, 이후 요청 0 수렴). 점수 미포함 관측.
+    """CREATE TABLE IF NOT EXISTS sector_cache (
+        symbol TEXT PRIMARY KEY, sector TEXT, industry TEXT, updated TEXT)""",
 ]
 
 
@@ -72,11 +76,14 @@ def main():
     print(f"[순환] 위치 {pos}/{len(symbols)} 부터 {len(batch)}종목 "
           f"(전체 한 바퀴 ≈ {len(symbols)//args.batch + 1}일)")
 
-    ok = fail = 0
-    rows = []
+    have_sector = {s for (s,) in con.execute(
+        "SELECT symbol FROM sector_cache WHERE sector IS NOT NULL")}
+    ok = fail = n_sec = 0
+    rows, sec_rows = [], []
     for s in batch:
         try:
-            fi = yf.Ticker(s).fast_info
+            t = yf.Ticker(s)
+            fi = t.fast_info
             mc = getattr(fi, "market_cap", None)
             sh = getattr(fi, "shares", None)
             if mc or sh:
@@ -86,21 +93,37 @@ def main():
                 ok += 1
             else:
                 fail += 1
+            # 섹터: 캐시에 없는 심볼만 1회 조회 (실패는 다음 바퀴 재시도)
+            if s not in have_sector:
+                try:
+                    info = t.info
+                    sec = (info.get("sector") or "").strip()
+                    ind = (info.get("industry") or "").strip()
+                    if sec:
+                        sec_rows.append((s, sec, ind, today))
+                        n_sec += 1
+                except Exception:
+                    pass
         except Exception:
             fail += 1
         if (ok + fail) % 100 == 0:
-            print(f"  … {ok+fail}/{len(batch)} (성공 {ok})")
+            print(f"  … {ok+fail}/{len(batch)} (성공 {ok} · 섹터 +{n_sec})")
             time.sleep(1.0)
     if rows:
         con.executemany(
             "INSERT OR IGNORE INTO valuation_rotate VALUES (?,?,?,?)", rows)
+    if sec_rows:
+        con.executemany(
+            "INSERT OR REPLACE INTO sector_cache VALUES (?,?,?,?)", sec_rows)
     con.execute("INSERT OR REPLACE INTO rotate_state VALUES ('pos', ?)",
                 ((pos + len(batch)) % len(symbols),))
     con.commit()
     n, nd = con.execute(
         "SELECT COUNT(*), COUNT(DISTINCT symbol) FROM valuation_rotate").fetchone()
+    nsec = con.execute("SELECT COUNT(*) FROM sector_cache").fetchone()[0]
     con.close()
-    print(f"완료: 성공 {ok} · 실패 {fail}(다음 바퀴 재시도). 누적 {n:,}행/{nd:,}심볼.")
+    print(f"완료: 성공 {ok} · 실패 {fail}(다음 바퀴 재시도). "
+          f"누적 {n:,}행/{nd:,}심볼 · 섹터 캐시 {nsec:,}(+{n_sec}).")
 
 
 if __name__ == "__main__":

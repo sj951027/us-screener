@@ -94,15 +94,44 @@ def build_message():
         lines.append(f"{r:2d}. <b>{sym}</b> — {names.get(sym, '')}")
     lines += ["", f"📊 점수·모멘텀·필터 상세: {PAGE_URL}",
               f"🎰 급등형 틸트(고변동·저공매도) 10: {TILT_URL}"]
-    # 관측 누적 표시(2026-07-18) — 판정 재료(score_daily)가 모델별로 며칠 채워졌는지.
-    #   본구축(9월) PREREGISTER 후 40거래일이 판정 기준. 조회 실패는 비치명 생략.
+
+    # 📈 관측 현황 (2026-07-18, 진행바+모델 성과) — 모델별 score_daily 누적 일수와
+    #   forward h5 rank-IC 를 즉석 계산해 함께 표시(한국판 현황판과 동일 사상).
+    #   표본이 쌓이기 전엔 '측정 대기'. 참고 표시일 뿐 판정 아님 — 판정은 본구축(9월)
+    #   PREREGISTER 후 OOS 40거래일. 조회·계산 실패는 비치명 생략.
     try:
         c2 = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-        parts = [f"{m} {n}일" for m, n in c2.execute(
-            "SELECT model, COUNT(DISTINCT date) FROM score_daily GROUP BY model ORDER BY model")]
+        models = [m for (m,) in c2.execute(
+            "SELECT DISTINCT model FROM score_daily ORDER BY model")]
+        if models:
+            pos_of = {d_: k for k, d_ in enumerate(ds)}
+            H5 = 5
+
+            def _bar(n_, target=40):
+                k = max(0, min(8, round(8 * n_ / target)))
+                return "▓" * k + "░" * (8 - k)
+
+            lines += ["", "📈 <b>관측 현황</b> (판정 재료 · 본구축 후 40거래일 · h5 IC는 참고)"]
+            for m in models:
+                dts = [d_ for (d_,) in c2.execute(
+                    "SELECT DISTINCT date FROM score_daily WHERE model=? ORDER BY date", (m,))]
+                ics = []
+                for d_ in dts:
+                    t0 = pos_of.get(d_)
+                    if t0 is None or t0 + H5 >= len(ds):
+                        continue          # forward 5거래일이 아직 없는 날
+                    s = pd.Series(dict(c2.execute(
+                        "SELECT symbol, score FROM score_daily WHERE model=? AND date=?",
+                        (m, d_))), dtype=float)
+                    b = (C[ds[t0 + H5]] / C[ds[t0]] - 1).reindex(s.index)
+                    mm = s.notna() & b.notna()
+                    if mm.sum() < 15:
+                        continue
+                    ics.append(float(np.corrcoef(s[mm].rank(), b[mm].rank())[0, 1]))
+                perf = (f" · h5 IC {np.mean(ics):+.2f}(n{len(ics)})" if ics
+                        else " · 측정 대기")
+                lines.append(f"  {m} {_bar(len(dts))} {len(dts)}/40일{perf}")
         c2.close()
-        if parts:
-            lines.append("📈 관측 누적: " + " · ".join(parts) + " (판정은 본구축 후 40거래일)")
     except Exception:
         pass
     lines += ["", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]

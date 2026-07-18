@@ -54,7 +54,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # v2026-07-18: us_tilt.csv(급등형 틸트 관측) 함께 커밋 — 없으면 무시(비치명)
           git add docs/data/us_latest.csv
+          git add docs/data/us_tilt.csv 2>/dev/null || true
           git diff --cached --quiet || (git commit -m "data: us_latest 자동 갱신" && git pull --rebase && git push)
 
       - name: Telegram test notice (관측 표시 — 매수신호 아님)

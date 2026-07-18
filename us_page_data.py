@@ -172,6 +172,75 @@ def main():
     print(f"score_daily 적재: 신규 {cur.rowcount}행 · 누적 {n_total[0]:,}행/{n_total[1]}일 "
           f"(model={MODEL_ID})")
 
+    # ── 급등형 틸트 관측 (2026-07-18): top50 중 고변동(rv63↑)+저공매도(dtc↓) 10 ──
+    # 발견(post-hoc, 94주간앵커 in-sample — outputs us_scan2/us_tail 2026-07-18):
+    #   day-IC h20: rv63 +0.063 CI[+0.004,+0.122] · dtc −0.041 CI[−0.082,−0.001].
+    #   +20%/20d 급등 적중 21.1%(유니버스 6.6%의 3.2배) — 단 −20% 급락도 12.8%(2배),
+    #   평균수익은 기본 top10과 차이 없음 → '복권형'(변동 증폭) 관측. 문헌: vol anomaly.
+    # ⚠️ 표시·기록 전용(가중치 0). 본구축(9월) PREREGISTER 전 판정·매수 근거 금지.
+    # dtc = FINRA days_to_cover. 결제일+14일 지연 적용(PIT 보수 — 공표 지연 반영).
+    TILT_MODEL_ID = "us_rvdtc_a"
+    TILT_POOL, TILT_TOP, SHORT_LAG_D = 50, 10, 14
+    try:
+        short_db = DATA_DIR / "us_short.db"
+        tilt, settle = None, None
+        if short_db.exists():
+            import datetime as _dt
+            lim = (_dt.datetime.strptime(ds[i], "%Y%m%d")
+                   - _dt.timedelta(days=SHORT_LAG_D)).strftime("%Y%m%d")
+            scon = sqlite3.connect(f"file:{short_db}?mode=ro", uri=True)
+            row = scon.execute("SELECT MAX(settlement_date) FROM short_interest "
+                               "WHERE settlement_date<=?", (lim,)).fetchone()
+            if row and row[0]:
+                settle = str(row[0])
+                dtc_map = dict(scon.execute(
+                    "SELECT symbol, days_to_cover FROM short_interest "
+                    "WHERE settlement_date=? AND days_to_cover IS NOT NULL", (settle,)))
+                pool = list(score.index[:TILT_POOL])
+                tf = pd.DataFrame(index=pool)
+                tf["rv63"] = w63.loc[pool].std(axis=1, ddof=1)
+                tf["dtc"] = pd.Series({s2: dtc_map.get(s2) for s2 in pool}, dtype=float)
+                tf = tf.dropna()
+                if len(tf) >= 25:   # 커버리지 절반 미만이면 순위 무의미 → 생략
+                    tf["combo"] = tf["rv63"].rank(pct=True) + (1 - tf["dtc"].rank(pct=True))
+                    tilt = tf.sort_values("combo", ascending=False)
+            scon.close()
+        if tilt is not None:
+            tsy = list(tilt.index[:TILT_TOP])
+            t_out = pd.DataFrame({
+                "rank": range(1, len(tsy) + 1),
+                "symbol": tsy,
+                "name": [names.get(s2, "").replace(",", " ")[:40] for s2 in tsy],
+                "sector": [sectors.get(s2, "").replace(",", " ") for s2 in tsy],
+                "mus_rank": [int(score.index.get_loc(s2)) + 1 for s2 in tsy],
+                "rv63": tilt.loc[tsy, "rv63"].round(4).values,
+                "dtc": tilt.loc[tsy, "dtc"].round(2).values,
+                "ret_1w_pct": ret_1w.loc[tsy].round(1).values,
+                "ret_1m_pct": ret_1m.loc[tsy].round(1).values,
+                "close": RAWC.loc[tsy, ds[i]].round(2).values,
+            })
+            t_out["settle"] = settle
+            t_out["n_pool"] = len(tilt)
+            t_out["date"] = ds[i]
+            t_out.to_csv(HERE / "docs" / "data" / "us_tilt.csv",
+                         index=False, encoding="utf-8-sig")
+            # score_daily 관측 적재(별도 model id — 풀 50 순위 기록, 본구축 판정 매칭용)
+            wc2 = sqlite3.connect(OHLCV_DB)
+            recs2 = [(TILT_MODEL_ID, ds[i], s2, rk2, float(tilt.at[s2, "combo"]),
+                      None, None, None) for rk2, s2 in enumerate(tilt.index, 1)]
+            c2 = wc2.executemany(
+                "INSERT OR IGNORE INTO score_daily VALUES (?,?,?,?,?,?,?,?)", recs2)
+            wc2.commit()
+            nt = wc2.execute("SELECT COUNT(DISTINCT date) FROM score_daily WHERE model=?",
+                             (TILT_MODEL_ID,)).fetchone()[0]
+            wc2.close()
+            print(f"틸트 저장: us_tilt.csv {len(tsy)}종목(결제일 {settle}) · "
+                  f"score_daily {TILT_MODEL_ID} 신규 {c2.rowcount}행 · 누적 {nt}일")
+        else:
+            print("틸트 생략: 공매도 데이터 없음/커버리지 부족 (비치명)")
+    except Exception as e:
+        print(f"틸트 실패(비치명): {e}")
+
 
 if __name__ == "__main__":
     try:

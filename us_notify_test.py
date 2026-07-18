@@ -34,6 +34,7 @@ SEED_DB = DATA_DIR / "us_seed.db"
 TOP_N = 10
 LOOKBACK = 260   # mom12(252) + 여유
 PAGE_URL = "https://sj951027.github.io/us-screener/us.html"  # 전체 표(GitHub Pages)
+TILT_URL = "https://sj951027.github.io/us-screener/us_tilt.html"  # 급등형 틸트(v 2026-07-18)
 
 
 def build_message():
@@ -92,7 +93,19 @@ def build_message():
     for r, (sym, _sc) in enumerate(top.items(), 1):
         lines.append(f"{r:2d}. <b>{sym}</b> — {names.get(sym, '')}")
     lines += ["", f"📊 점수·모멘텀·필터 상세: {PAGE_URL}",
-              "", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]
+              f"🎰 급등형 틸트(고변동·저공매도) 10: {TILT_URL}"]
+    # 관측 누적 표시(2026-07-18) — 판정 재료(score_daily)가 모델별로 며칠 채워졌는지.
+    #   본구축(9월) PREREGISTER 후 40거래일이 판정 기준. 조회 실패는 비치명 생략.
+    try:
+        c2 = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
+        parts = [f"{m} {n}일" for m, n in c2.execute(
+            "SELECT model, COUNT(DISTINCT date) FROM score_daily GROUP BY model ORDER BY model")]
+        c2.close()
+        if parts:
+            lines.append("📈 관측 누적: " + " · ".join(parts) + " (판정은 본구축 후 40거래일)")
+    except Exception:
+        pass
+    lines += ["", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]
     return "\n".join(lines), ds[i]
 
 

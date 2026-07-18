@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US 급등형 틸트 (고변동+저공매도) · 테스트 관측</title>
+<style>
+  :root{--bg:#0b0e13;--card:#131824;--line:#232a3a;--tx:#dbe2ee;--sub:#8a94a8;--accent:#f6a821;--warn:#ff6b6b}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.55 -apple-system,'Segoe UI',Roboto,'Malgun Gothic',sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:18px}
+  h1{font-size:18px;margin:6px 0 2px} .sub{color:var(--sub);font-size:12px}
+  .warn{background:#2a1616;border:1px solid #5c2b2b;border-radius:10px;padding:10px 12px;font-size:12.5px;margin:12px 0;color:#f2c4c4}
+  .info{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;margin:12px 0;color:var(--sub)}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:10px}
+  th,td{padding:7px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+  th{color:var(--sub);font-weight:600;position:sticky;top:0;background:var(--bg)}
+  th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),th:nth-child(4),td:nth-child(4){text-align:left}
+  td:first-child{color:var(--accent);font-weight:700}
+  .chip{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin-right:6px;font-size:12px;color:var(--sub)}
+  .loading{color:var(--sub);text-align:center;padding:28px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎰 US 급등형 틸트 — 고변동 + 저공매도 10</h1>
+  <div class="sub">us_mus_v0 상위 50 중 변동성(rv63) 높고 공매도 커버일수(FINRA dtc) 낮은 순 10종목 · model id <b>us_rvdtc_a</b> (관측, 가중치 0)</div>
+
+  <div class="warn">⚠️ <b>매수신호 아님 — 복권형 관측입니다.</b> in-sample(94주간 앵커·생존편향 미보정)에서
+  20거래일 내 +20% 급등 적중 21.1%(유니버스의 3.2배)였지만, <b>−20% 급락도 12.8%(2배)</b>였고
+  평균수익은 기본 top10과 차이가 없었습니다. 급등 확률과 급락 확률이 함께 커지는(변동 증폭) 조건이지
+  수익을 만드는 조건이 아닙니다. 판정은 본구축(9월~) PREREGISTER 후 OOS 40거래일.</div>
+
+  <div id="chips"></div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>심볼</th><th>종목명</th><th>섹터</th>
+      <th title="us_mus_v0 원 순위(상위50 안)">mus순위</th>
+      <th title="63일 일수익 표준편차 — 높을수록 고변동(틸트 기준↑)">rv63</th>
+      <th title="FINRA days to cover — 낮을수록 공매도 압력 적음(틸트 기준↓). 결제일+14일 지연 반영">dtc</th>
+      <th>1주%</th><th>1개월%</th><th>종가$</th>
+    </tr></thead>
+    <tbody id="tb"><tr><td colspan="10" class="loading">불러오는 중…</td></tr></tbody>
+  </table>
+
+  <div class="info">읽는 법: 이 목록은 "크게 움직일 가능성"의 관측이며 방향을 보장하지 않습니다.
+  dtc 기준 결제일(settle)은 FINRA 격주 공시라 최대 한 달 전 값일 수 있습니다.
+  전체 순위표는 <a href="us.html">us.html</a> 참고. 근거 스캔: outputs us_scan2 · us_tail (2026-07-18).</div>
+</div>
+<script>
+fetch('data/us_tilt.csv?ts='+Date.now())
+  .then(r=>{ if(!r.ok) throw 0; return r.text(); })
+  .then(txt=>{
+    const lines = txt.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.length);
+    const head = lines[0].split(',');
+    const rows = lines.slice(1).map(l=>{ const v=l.split(','); const o={}; head.forEach((h,j)=>o[h]=v[j]); return o; });
+    if(!rows.length) throw 0;
+    const r0 = rows[0];
+    document.getElementById('chips').innerHTML =
+      `<span class="chip">기준일 <b>${r0.date}</b></span>`+
+      `<span class="chip">공매도 결제일 ${r0.settle}</span>`+
+      `<span class="chip">풀 ${r0.n_pool} (top50 중 dtc 보유)</span>`;
+    const f=(x,d)=>{ const n=parseFloat(x); return isNaN(n)?'':n.toFixed(d); };
+    document.getElementById('tb').innerHTML = rows.map(r=>
+      `<tr><td>${r.rank}</td><td><b>${r.symbol}</b></td><td>${r.name||''}</td><td>${r.sector||''}</td>`+
+      `<td>${r.mus_rank}</td><td>${f(r.rv63,3)}</td><td>${f(r.dtc,2)}</td>`+
+      `<td>${f(r.ret_1w_pct,1)}</td><td>${f(r.ret_1m_pct,1)}</td><td>${f(r.close,2)}</td></tr>`).join('');
+  })
+  .catch(()=>{ document.getElementById('tb').innerHTML =
+    '<tr><td colspan="10" class="loading">데이터 없음 (data/us_tilt.csv) — 다음 Actions 실행 후 생성됩니다</td></tr>'; });
+</script>
+</body>
+</html>

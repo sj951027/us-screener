@@ -182,13 +182,27 @@ def main():
     TILT_MODEL_ID = "us_rvdtc_a"
     TILT_POOL, TILT_TOP, SHORT_LAG_D = 50, 10, 14
     try:
-        short_db = DATA_DIR / "us_short.db"
+        # ⚠️ 2026-07-18 버그픽스: 지식문서 §3의 'us_short.db'를 믿고 별도 파일을 찾았으나
+        #   실제 수집기(us_short_collector.py)는 us_ohlcv.db `short_interest`에 쓴다 →
+        #   runner에서 파일이 없어 조용히 '생략'됐음. us_ohlcv 우선, 구본 파일 폴백.
+        def _short_con():
+            c_ = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
+            try:
+                c_.execute("SELECT 1 FROM short_interest LIMIT 1")
+                return c_
+            except sqlite3.OperationalError:
+                c_.close()
+            alt = DATA_DIR / "us_short.db"
+            if alt.exists():
+                return sqlite3.connect(f"file:{alt}?mode=ro", uri=True)
+            return None
+
         tilt, settle = None, None
-        if short_db.exists():
+        scon = _short_con()
+        if scon is not None:
             import datetime as _dt
             lim = (_dt.datetime.strptime(ds[i], "%Y%m%d")
                    - _dt.timedelta(days=SHORT_LAG_D)).strftime("%Y%m%d")
-            scon = sqlite3.connect(f"file:{short_db}?mode=ro", uri=True)
             row = scon.execute("SELECT MAX(settlement_date) FROM short_interest "
                                "WHERE settlement_date<=?", (lim,)).fetchone()
             if row and row[0]:

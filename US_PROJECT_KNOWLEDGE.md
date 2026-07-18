@@ -46,7 +46,7 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
 | | valuation_rotate | 시총·주식수 순환 스냅샷(600/일, ~12일 한 바퀴) |
 | | **score_daily** | 매일 전 유니버스 점수·순위·팩터 (model,date,symbol PK) — OOS 판정 재료 |
 | us_market.db | market_daily | SPX·NDX·COMP·VIX·DXY·US10Y·USDKRW |
-| us_short.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) |
+| us_ohlcv.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) ⚠️ 별도 us_short.db 아님 — 수집기가 us_ohlcv.db 에 적재(2026-07-18 문서 교정: 이 오기를 믿은 틸트 배선이 runner 에서 조용히 생략되는 버그 유발) |
 
 ## §4. 모델 상태
 

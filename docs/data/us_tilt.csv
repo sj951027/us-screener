@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,,24,0.0763,1.0,-29.3,-32.0,1354.82,20260630,50,20260717
-2,SIMO,Silicon Motion Technology Corporation - ,,31,0.0746,1.0,-19.0,-6.5,264.33,20260630,50,20260717
-3,MXL,MaxLinear  Inc - Common Stock,,9,0.1299,1.01,-21.3,-14.9,71.84,20260630,50,20260717
-4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,5,0.071,1.0,-20.0,-32.3,188.68,20260630,50,20260717
-5,MU,Micron Technology  Inc. - Common Stock,,27,0.0667,1.0,-13.3,-16.8,848.95,20260630,50,20260717
-6,BB,BlackBerry Limited Common Stock,,35,0.0572,1.15,-18.0,-2.0,8.99,20260630,50,20260717
-7,STM,STMicroelectronics N.V. Common Stock,,18,0.0477,1.0,-13.2,-16.7,62.06,20260630,50,20260717
-8,TER,Teradyne  Inc. - Common Stock,Technology,15,0.0615,1.33,-10.4,-21.3,322.36,20260630,50,20260717
-9,AMD,Advanced Micro Devices  Inc. - Common St,,17,0.0538,1.3,-11.1,-2.3,495.76,20260630,50,20260717
-10,STX,Seagate Technology Holdings PLC - Ordina,,1,0.0489,1.12,-13.5,-23.6,787.66,20260630,50,20260717
+1,SNDK,Sandisk Corporation - Common Stock When-,,17,0.0763,1.0,-16.9,-29.0,1390.95,20260630,50,20260720
+2,SIMO,Silicon Motion Technology Corporation - ,,44,0.075,1.0,-15.7,-17.7,252.61,20260630,50,20260720
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0709,1.0,-10.4,-32.7,194.94,20260630,50,20260720
+4,MXL,MaxLinear  Inc - Common Stock,,9,0.1293,1.01,-16.0,-9.5,75.01,20260630,50,20260720
+5,MU,Micron Technology  Inc. - Common Stock,,8,0.0667,1.0,-7.6,-17.0,865.46,20260630,50,20260720
+6,TTMI,TTM Technologies  Inc. - Common Stock,Technology,40,0.0513,1.0,-2.3,-34.3,133.17,20260630,50,20260720
+7,TER,Teradyne  Inc. - Common Stock,Technology,12,0.0614,1.33,-2.2,-18.3,333.76,20260630,50,20260720
+8,STM,STMicroelectronics N.V. Common Stock,,26,0.0472,1.0,-9.8,-15.7,61.78,20260630,50,20260720
+9,AMD,Advanced Micro Devices  Inc. - Common St,Technology,13,0.0538,1.3,-5.8,-1.7,503.57,20260630,50,20260720
+10,ARM,Arm Holdings plc - American Depositary S,Technology,32,0.0705,1.48,-9.8,-35.6,269.61,20260630,50,20260720

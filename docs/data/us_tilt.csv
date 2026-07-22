@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,,13,0.0781,1.0,-9.6,-27.3,1589.4,20260630,50,20260721
-2,SIMO,Silicon Motion Technology Corporation - ,,24,0.0758,1.0,-9.8,-13.5,278.17,20260630,50,20260721
-3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.071,1.0,-6.5,-33.0,207.96,20260630,50,20260721
-4,MXL,MaxLinear  Inc - Common Stock,,12,0.1281,1.01,-7.1,-3.0,86.06,20260630,50,20260721
-5,MU,Micron Technology  Inc. - Common Stock,,6,0.068,1.0,-1.3,-14.4,970.82,20260630,50,20260721
-6,SMTC,Semtech Corporation - Common Stock,,25,0.0558,1.0,-2.5,-12.9,137.84,20260630,50,20260721
-7,TTMI,TTM Technologies  Inc. - Common Stock,Technology,20,0.0528,1.0,3.4,-32.2,146.85,20260630,50,20260721
-8,TER,Teradyne  Inc. - Common Stock,Technology,9,0.0633,1.33,5.9,-14.6,374.04,20260630,50,20260721
-9,STM,STMicroelectronics N.V. Common Stock,,26,0.0477,1.0,-6.7,-16.4,65.43,20260630,50,20260721
-10,ARM,Arm Holdings plc - American Depositary S,Technology,35,0.0708,1.48,3.0,-34.1,289.73,20260630,50,20260721
+1,SNDK,Sandisk Corporation - Common Stock When-,,6,0.078,1.0,-1.0,-29.7,1599.27,20260630,50,20260722
+2,SIMO,Silicon Motion Technology Corporation - ,,27,0.0757,1.0,-4.0,-16.4,281.68,20260630,50,20260722
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.071,1.0,2.3,-31.4,210.99,20260630,50,20260722
+4,MXL,MaxLinear  Inc - Common Stock,,9,0.128,1.01,-2.3,-10.0,86.8,20260630,50,20260722
+5,STRL,Sterling Infrastructure  Inc. - Common S,,40,0.0834,1.04,7.6,-22.9,719.34,20260630,50,20260722
+6,MU,Micron Technology  Inc. - Common Stock,,10,0.068,1.0,6.1,-20.8,959.48,20260630,50,20260722
+7,SMTC,Semtech Corporation - Common Stock,,26,0.0557,1.0,1.3,-21.6,136.93,20260630,50,20260722
+8,TTMI,TTM Technologies  Inc. - Common Stock,Technology,22,0.0529,1.0,0.8,-34.7,144.7,20260630,50,20260722
+9,STM,STMicroelectronics N.V. Common Stock,,17,0.0476,1.0,-2.9,-17.6,65.77,20260630,50,20260722
+10,TER,Teradyne  Inc. - Common Stock,Technology,13,0.0633,1.33,8.0,-19.2,369.46,20260630,50,20260722

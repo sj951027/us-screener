@@ -15,7 +15,7 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180   # v2026-07-26: 주1회 SEC 벌크 2종(각 ~1.3GB) 겹치는 날 여유
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +30,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download data-store --pattern 'us-data.tar.gz' --dir . && tar xzf us-data.tar.gz || echo "이전 데이터 없음 — 새로 시작"
+          # v2026-07-26 방어 강화: '다운로드는 됐는데 tar 가 손상'인 경우를 빈 상태
+          # 새 시작과 구분 — 손상 tar 로 조용히 처음부터 재수집하면 몇 년치 정본을
+          # 하루짜리로 덮어쓸 수 있다(치명). 손상이면 즉시 실패 → 주간 백업으로 수동 복구.
+          if gh release download data-store --pattern 'us-data.tar.gz' --dir .; then
+            tar xzf us-data.tar.gz || { echo "❌ us-data.tar.gz 손상 — 중단(빈 재시작 방지). us-data-weekly.tar.gz 로 복구 필요"; exit 1; }
+          else
+            echo "이전 데이터 없음 — 새로 시작"
+          fi
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 
@@ -44,6 +51,13 @@ jobs:
           python us_market_series.py
           python us_rotate_collector.py
           python us_short_collector.py
+          # v2026-07-26 데이터 확장 1·2차: SEC 벌크 (둘 다 주간 가드 내장 — 실제 수집은
+          #   주1회, 비치명·관측 전용). ① XBRL 재무 ② 실적 발표일(8-K Item 2.02).
+          #   저평가/PEAD(SUE)/재무모멘텀 검증 재료(본구축 9월).
+          python us_xbrl_collector.py
+          python us_earnings_collector.py
+          # 3차: Form 4 내부자(분기 구조화셋, 회당 4분기 점진 백필 — ~1주에 걸쳐 완성)
+          python us_insider_collector.py
 
       - name: Build page data (docs/data/us_latest.csv)
         env:

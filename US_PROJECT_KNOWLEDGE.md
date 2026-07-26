@@ -46,6 +46,9 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
 | | valuation_rotate | 시총·주식수 순환 스냅샷(600/일, ~12일 한 바퀴) |
 | | **score_daily** | 매일 전 유니버스 점수·순위·팩터 (model,date,symbol PK) — OOS 판정 재료 |
 | us_market.db | market_daily | SPX·NDX·COMP·VIX·DXY·US10Y·USDKRW |
+| us_fundamentals.db | insider_tx | Form 4 내부자 P/S 거래(SEC 분기 구조화셋, 관계플래그·단가·**filed=PIT**, 분기 idempotent·회당 4분기 점진 백필 2019~) — 내부자 순매수 신호 재료. 2026-07-26 신설 |
+| us_fundamentals.db | earnings_events | 실적 발표일(8-K Item 2.02 판별 + 10-K/Q 폴백, **accepted 접수시각**으로 장전/장후 구분, filed≥2019, PK cik+accn append-only) — PEAD 이벤트 날짜. 2026-07-26 신설 |
+| us_fundamentals.db | xbrl_facts/cik_ticker | SEC XBRL 재무 벌크(주1회, 화이트리스트 12태그, end≥2019, **filed(공시일) 보존=PIT append-only**) — 저평가·SUE(PEAD)·재무모멘텀 재료. 2026-07-26 신설, 관측 전용 |
 | us_ohlcv.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) ⚠️ 별도 us_short.db 아님 — 수집기가 us_ohlcv.db 에 적재(2026-07-18 문서 교정: 이 오기를 믿은 틸트 배선이 runner 에서 조용히 생략되는 버그 유발) |
 
 ## §4. 모델 상태
@@ -83,12 +86,28 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
   타이밍 스캔 결론(같은 날): 진입 시점 변경 이득 없음(신호가 실행에 강건), 레짐 게이트는
   스냅 데이터로 측정 불가(본구축 때 us_market.db 로), 보유기간 곡선은 감쇠 없이 h20 지속.
 
+- 2026-07-26 (데이터 확장): "특급 모델 없나" 논의 결론 — 같은 가격 데이터 재조합은 한계
+  (KR 5전5패·US 눌림목 스캔 h60 +0.9%p CI 경계 실측). 새 알파는 **직교 데이터**에서 →
+  SEC EDGAR 3종 수집 결정: ① XBRL 재무(us_xbrl_collector, 완료) ② 실적발표일 8-K(us_earnings_collector, 완료)
+  ③ Form 4 내부자(us_insider_collector, 완료 — 백필은 Actions ~1주 자동). 전부 관측 적재만, 검증은 본구축 PREREGISTER 후.
+  덤: 우량추세(모멘텀 상위20%+200MA) 내 진입시점 스캔 — 신고가 +3.5%p vs 눌림 +4.3~4.5%p
+  (h60 초과, 86주간앵커, 생존편향 미보정) · 짝차이 +0.93%p CI[-0.02,+1.91] = 기움.
+  본구축 때 dd63 관측 컬럼으로 정식 검증 후보.
+
 ## §6. 캘린더
 
 - **9월 본구축**: 더 쌓인 데이터로 스캔 재실행 → 후보 1~2개 PREREGISTER
   (유력 us_mus_v0, 대조 size제외판, 안정재 vol_cv 변형) → OOS 40거래일 판정.
   생존편향 보정(listing_events), size_amt→실시총 교체 검토, SEC XBRL 대량 작업.
 - 캘린더 공통: 한국판 8월 중순 v3 판정, 9월 wu 판정(§ dh-q7m3k PROJECT_KNOWLEDGE.md).
+
+### §6-1. 용량 캘린더 (2026-07-26 점검)
+- Release 자산은 **파일당 2GB** 제한. 현 tar ~0.8~1.2GB 추정(ohlcv 압축 + fundamentals).
+  성장률(ohlcv +250MB/yr raw · xbrl +50~100MB/yr)로 **2028년 전후 한도 근접** →
+  그때 DB별 tar 분할 업로드(워크플로 몇 줄)로 해결. 지금 조치 불요, 잊지만 말 것.
+- 자산 개수는 --clobber 교체라 상시 2개(daily+weekly) 고정 — 누적 없음.
+- Actions: public repo 무료 무제한 · 러너 디스크 14GB(피크 ~7GB) · RAM 7GB — 여유.
+- git repo 자체는 코드+us_latest.csv 일일커밋(~100MB/yr, §5 기존 항목 — 본구축 때 재검토).
 
 ## §7. 트러블슈팅 (실측)
 

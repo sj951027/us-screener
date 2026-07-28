@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,,6,0.0798,1.0,-8.1,-45.3,1278.23,20260630,50,20260727
-2,SIMO,Silicon Motion Technology Corporation - ,,31,0.0771,1.0,-3.2,-24.8,244.45,20260630,50,20260727
-3,MXL,MaxLinear  Inc - Common Stock,,13,0.0917,1.01,-13.5,-31.3,64.86,20260630,50,20260727
-4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0715,1.0,-3.0,-32.7,189.17,20260630,50,20260727
-5,MU,Micron Technology  Inc. - Common Stock,,11,0.0683,1.0,4.0,-25.8,900.2,20260630,50,20260727
-6,STM,STMicroelectronics N.V. Common Stock,,34,0.0523,1.0,-13.5,-28.6,53.45,20260630,50,20260727
-7,TER,Teradyne  Inc. - Common Stock,Technology,48,0.0636,1.33,0.3,-29.1,334.77,20260630,50,20260727
-8,STX,Seagate Technology Holdings PLC - Ordina,,1,0.0515,1.12,1.8,-20.3,816.99,20260630,50,20260727
-9,COHR,Coherent Corp. Common Stock,,22,0.0581,1.37,-4.9,-33.4,271.31,20260630,50,20260727
-10,DELL,Dell Technologies Inc. Class C Common St,,9,0.0637,1.47,11.8,4.3,426.91,20260630,50,20260727
+1,SNDK,Sandisk Corporation - Common Stock When-,,10,0.0814,1.0,-31.0,-47.6,1096.1,20260630,50,20260728
+2,SIMO,Silicon Motion Technology Corporation - ,,27,0.078,1.0,-20.4,-27.5,221.42,20260630,50,20260728
+3,MXL,MaxLinear  Inc - Common Stock,Technology,11,0.0906,1.01,-31.5,-39.0,58.94,20260630,50,20260728
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.072,1.0,-16.1,-34.6,174.47,20260630,50,20260728
+5,MU,Micron Technology  Inc. - Common Stock,Technology,33,0.0692,1.0,-15.5,-27.5,820.53,20260630,50,20260728
+6,TER,Teradyne  Inc. - Common Stock,Technology,46,0.0636,1.33,-14.3,-26.6,320.65,20260630,50,20260728
+7,STX,Seagate Technology Holdings PLC - Ordina,,1,0.0527,1.12,-16.2,-17.0,747.3,20260630,50,20260728
+8,COHR,Coherent Corp. Common Stock,,20,0.0593,1.37,-23.3,-36.1,243.33,20260630,50,20260728
+9,DELL,Dell Technologies Inc. Class C Common St,,8,0.0648,1.47,-3.0,-1.8,392.1,20260630,50,20260728
+10,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.05,1.37,-15.6,-24.0,476.46,20260630,50,20260728

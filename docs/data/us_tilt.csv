@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,,9,0.0815,1.0,-36.5,-50.5,1015.89,20260715,50,20260729
-2,MU,Micron Technology  Inc. - Common Stock,Technology,25,0.0703,1.0,-23.0,-35.5,739.0,20260715,50,20260729
-3,MXL,MaxLinear  Inc - Common Stock,Technology,26,0.0907,1.3,-34.0,-47.2,57.25,20260715,50,20260729
-4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0724,1.22,-22.6,-41.2,163.4,20260715,50,20260729
-5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,27,0.0485,1.0,-23.1,-25.4,31.12,20260715,50,20260729
-6,DELL,Dell Technologies Inc. Class C Common St,,8,0.0649,1.75,-16.3,-10.8,369.64,20260715,50,20260729
-7,AMD,Advanced Micro Devices  Inc. - Common St,Technology,46,0.0535,1.55,-22.2,-20.4,429.56,20260715,50,20260729
-8,TER,Teradyne  Inc. - Common Stock,Technology,36,0.0633,1.94,-13.5,-31.0,319.41,20260715,50,20260729
-9,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0506,1.65,-21.2,-37.2,436.45,20260715,50,20260729
-10,STX,Seagate Technology Holdings PLC - Ordina,,1,0.0526,1.7,-15.8,-21.1,764.43,20260715,50,20260729
+1,SNDK,Sandisk Corporation - Common Stock When-,Technology,11,0.0874,1.0,-20.5,-43.7,1279.96,20260715,50,20260730
+2,MU,Micron Technology  Inc. - Common Stock,Technology,36,0.0737,1.0,-11.7,-24.2,874.66,20260715,50,20260730
+3,MXL,MaxLinear  Inc - Common Stock,Technology,37,0.0853,1.3,-26.7,-47.7,66.92,20260715,50,20260730
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0739,1.22,-12.4,-38.5,183.3,20260715,50,20260730
+5,TTMI,TTM Technologies  Inc. - Common Stock,Technology,43,0.0572,1.0,-20.3,-38.2,115.51,20260715,50,20260730
+6,DELL,Dell Technologies Inc. Class C Common St,,5,0.0658,1.75,-7.9,-6.2,404.81,20260715,50,20260730
+7,ASX,ASE Technology Holding Co.  Ltd. America,Technology,39,0.0506,1.0,-11.9,-22.2,34.77,20260715,50,20260730
+8,COHR,Coherent Corp. Common Stock,,26,0.0619,1.99,-20.5,-36.9,249.06,20260715,50,20260730
+9,TER,Teradyne  Inc. - Common Stock,Technology,20,0.0609,1.94,-2.2,-24.5,365.49,20260715,50,20260730
+10,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0538,1.65,-10.8,-30.6,501.77,20260715,50,20260730

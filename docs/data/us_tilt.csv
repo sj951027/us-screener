@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,Technology,11,0.0874,1.0,-20.5,-43.7,1279.96,20260715,50,20260730
-2,MU,Micron Technology  Inc. - Common Stock,Technology,36,0.0737,1.0,-11.7,-24.2,874.66,20260715,50,20260730
-3,MXL,MaxLinear  Inc - Common Stock,Technology,37,0.0853,1.3,-26.7,-47.7,66.92,20260715,50,20260730
-4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0739,1.22,-12.4,-38.5,183.3,20260715,50,20260730
-5,TTMI,TTM Technologies  Inc. - Common Stock,Technology,43,0.0572,1.0,-20.3,-38.2,115.51,20260715,50,20260730
-6,DELL,Dell Technologies Inc. Class C Common St,,5,0.0658,1.75,-7.9,-6.2,404.81,20260715,50,20260730
-7,ASX,ASE Technology Holding Co.  Ltd. America,Technology,39,0.0506,1.0,-11.9,-22.2,34.77,20260715,50,20260730
-8,COHR,Coherent Corp. Common Stock,,26,0.0619,1.99,-20.5,-36.9,249.06,20260715,50,20260730
-9,TER,Teradyne  Inc. - Common Stock,Technology,20,0.0609,1.94,-2.2,-24.5,365.49,20260715,50,20260730
-10,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0538,1.65,-10.8,-30.6,501.77,20260715,50,20260730
+1,SNDK,Sandisk Corporation - Common Stock When-,Technology,25,0.0877,1.0,-15.4,-40.2,1214.83,20260715,50,20260731
+2,MU,Micron Technology  Inc. - Common Stock,Technology,27,0.0742,1.0,-10.6,-20.3,823.03,20260715,50,20260731
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0736,1.22,-3.4,-31.0,187.56,20260715,50,20260731
+4,DELL,Dell Technologies Inc. Class C Common St,,5,0.0658,1.75,-7.3,-4.7,405.37,20260715,50,20260731
+5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,31,0.0505,1.0,-4.5,-17.4,35.17,20260715,50,20260731
+6,COHR,Coherent Corp. Common Stock,,15,0.062,1.99,-6.9,-28.7,262.89,20260715,50,20260731
+7,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0538,1.65,-5.3,-22.0,507.67,20260715,50,20260731
+8,ALAB,Astera Labs  Inc. - Common Stock,Technology,46,0.073,2.07,6.7,-27.8,311.23,20260715,50,20260731
+9,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0524,1.7,0.5,-6.5,856.13,20260715,50,20260731
+10,TER,Teradyne  Inc. - Common Stock,Technology,13,0.059,1.94,5.1,-14.0,367.69,20260715,50,20260731

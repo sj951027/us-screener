@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,Technology,25,0.0877,1.0,-15.4,-40.2,1214.83,20260715,50,20260731
-2,MU,Micron Technology  Inc. - Common Stock,Technology,27,0.0742,1.0,-10.6,-20.3,823.03,20260715,50,20260731
-3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0736,1.22,-3.4,-31.0,187.56,20260715,50,20260731
-4,DELL,Dell Technologies Inc. Class C Common St,,5,0.0658,1.75,-7.3,-4.7,405.37,20260715,50,20260731
-5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,31,0.0505,1.0,-4.5,-17.4,35.17,20260715,50,20260731
-6,COHR,Coherent Corp. Common Stock,,15,0.062,1.99,-6.9,-28.7,262.89,20260715,50,20260731
-7,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0538,1.65,-5.3,-22.0,507.67,20260715,50,20260731
-8,ALAB,Astera Labs  Inc. - Common Stock,Technology,46,0.073,2.07,6.7,-27.8,311.23,20260715,50,20260731
-9,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0524,1.7,0.5,-6.5,856.13,20260715,50,20260731
-10,TER,Teradyne  Inc. - Common Stock,Technology,13,0.059,1.94,5.1,-14.0,367.69,20260715,50,20260731
+1,CRNX,Crinetics Pharmaceuticals  Inc. - Common,,24,0.1281,1.0,-0.1,98.3,83.76,20260715,50,20260803
+2,SNDK,Sandisk Corporation - Common Stock When-,Technology,31,0.0874,1.0,0.8,-26.2,1288.03,20260715,50,20260803
+3,MU,Micron Technology  Inc. - Common Stock,Technology,33,0.074,1.0,-7.9,-15.0,829.5,20260715,50,20260803
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,5,0.0737,1.22,2.4,-21.0,193.77,20260715,50,20260803
+5,DELL,Dell Technologies Inc. Class C Common St,,6,0.066,1.75,0.5,8.8,429.02,20260715,50,20260803
+6,ASX,ASE Technology Holding Co.  Ltd. America,Technology,36,0.0508,1.0,0.4,-11.5,36.68,20260715,50,20260803
+7,COHR,Coherent Corp. Common Stock,,18,0.0631,1.99,6.2,-13.6,288.14,20260715,50,20260803
+8,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0537,1.65,0.3,-14.1,518.21,20260715,50,20260803
+9,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0518,1.7,1.7,1.3,831.06,20260715,50,20260803
+10,LRCX,Lam Research Corporation - Common Stock,Technology,48,0.0547,2.41,1.0,-16.2,294.61,20260715,50,20260803

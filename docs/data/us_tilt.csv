@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0754,1.22,14.9,-9.1,210.54,20260715,50,20260806
-2,DELL,Dell Technologies Inc. Class C Common St,Technology,12,0.0663,1.75,8.1,1.3,437.65,20260715,50,20260806
-3,ALAB,Astera Labs  Inc. - Common Stock,Technology,17,0.0759,2.07,10.6,-15.7,331.5,20260715,50,20260806
-4,COHR,Coherent Corp. Common Stock,Technology,16,0.0649,1.99,34.2,5.4,334.22,20260715,50,20260806
-5,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0538,1.65,5.1,-7.5,527.48,20260715,50,20260806
-6,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,43,0.0493,1.19,21.3,-1.2,301.64,20260715,50,20260806
-7,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0515,1.7,0.1,-0.8,852.95,20260715,50,20260806
-8,ASML,ASML Holding N.V. - New York Registry Sh,Technology,41,0.0367,1.0,3.2,-3.6,1704.37,20260715,50,20260806
-9,MTRN,Materion Corporation,Basic Materials,39,0.0556,2.02,33.7,12.1,278.26,20260715,50,20260806
-10,SMTC,Semtech Corporation - Common Stock,Technology,46,0.0603,2.18,17.6,4.6,134.78,20260715,50,20260806
+1,CRDO,Credo Technology Group Holding Ltd - Ord,Technology,39,0.0667,1.0,20.7,-5.9,249.89,20260715,50,20260807
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0749,1.22,16.6,-10.1,218.72,20260715,50,20260807
+3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,45,0.0551,1.0,18.9,-8.5,137.21,20260715,50,20260807
+4,ALAB,Astera Labs  Inc. - Common Stock,Technology,13,0.0749,2.07,7.4,-19.9,334.17,20260715,50,20260807
+5,COHR,Coherent Corp. Common Stock,Technology,10,0.0663,1.99,44.2,15.9,379.13,20260715,50,20260807
+6,DELL,Dell Technologies Inc. Class C Common St,Technology,8,0.0661,1.75,11.9,0.8,453.77,20260715,50,20260807
+7,ASX,ASE Technology Holding Co.  Ltd. America,Technology,46,0.0512,1.0,6.3,-13.5,37.39,20260715,50,20260807
+8,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0535,1.65,6.2,-8.4,539.14,20260715,50,20260807
+9,MTRN,Materion Corporation,Basic Materials,33,0.0556,2.02,37.6,13.0,290.05,20260715,50,20260807
+10,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0518,1.7,-5.1,-8.7,812.76,20260715,50,20260807

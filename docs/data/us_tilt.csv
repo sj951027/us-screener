@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MU,Micron Technology  Inc. - Common Stock,Technology,34,0.0731,1.0,20.9,-4.8,893.19,20260715,50,20260805
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0754,1.22,29.1,-8.5,211.02,20260715,50,20260805
-3,DELL,Dell Technologies Inc. Class C Common St,,8,0.0668,1.75,25.2,10.9,462.7,20260715,50,20260805
-4,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0539,1.65,22.4,-3.7,534.24,20260715,50,20260805
-5,COHR,Coherent Corp. Common Stock,,21,0.065,1.99,47.8,4.5,328.22,20260715,50,20260805
-6,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0515,1.7,9.6,1.2,837.66,20260715,50,20260805
-7,MTRN,Materion Corporation,Basic Materials,47,0.0549,2.02,56.9,20.2,297.08,20260715,50,20260805
-8,AAL,American Airlines Group  Inc. - Common S,Industrials,32,0.0342,1.0,11.7,-3.6,16.58,20260715,50,20260805
-9,PANW,Palo Alto Networks  Inc. - Common Stock,Technology,6,0.0347,2.83,15.4,7.6,362.66,20260715,50,20260805
-10,CRWD,CrowdStrike Holdings  Inc. - Class A Com,,33,0.0357,2.93,17.0,7.8,209.86,20260715,50,20260805
+1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0754,1.22,14.9,-9.1,210.54,20260715,50,20260806
+2,DELL,Dell Technologies Inc. Class C Common St,Technology,12,0.0663,1.75,8.1,1.3,437.65,20260715,50,20260806
+3,ALAB,Astera Labs  Inc. - Common Stock,Technology,17,0.0759,2.07,10.6,-15.7,331.5,20260715,50,20260806
+4,COHR,Coherent Corp. Common Stock,Technology,16,0.0649,1.99,34.2,5.4,334.22,20260715,50,20260806
+5,AMAT,Applied Materials  Inc. - Common Stock,Technology,2,0.0538,1.65,5.1,-7.5,527.48,20260715,50,20260806
+6,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,43,0.0493,1.19,21.3,-1.2,301.64,20260715,50,20260806
+7,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0515,1.7,0.1,-0.8,852.95,20260715,50,20260806
+8,ASML,ASML Holding N.V. - New York Registry Sh,Technology,41,0.0367,1.0,3.2,-3.6,1704.37,20260715,50,20260806
+9,MTRN,Materion Corporation,Basic Materials,39,0.0556,2.02,33.7,12.1,278.26,20260715,50,20260806
+10,SMTC,Semtech Corporation - Common Stock,Technology,46,0.0603,2.18,17.6,4.6,134.78,20260715,50,20260806

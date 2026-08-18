@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,FBRX,Forte Biosciences  Inc.  - Common Stock,Healthcare,27,0.1198,1.0,0.1,57.4,76.89,20260731,49,20260817
-2,SNDK,Sandisk Corporation - Common Stock When-,Technology,8,0.0875,1.0,44.3,31.9,1786.85,20260731,49,20260817
-3,MU,Micron Technology  Inc. - Common Stock,Technology,20,0.0694,1.0,17.5,19.2,1011.75,20260731,49,20260817
-4,CRDO,Credo Technology Group Holding Ltd - Ord,Technology,44,0.0655,1.02,17.9,39.5,282.82,20260731,49,20260817
-5,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0742,1.46,12.4,24.2,234.33,20260731,49,20260817
-6,COHR,Coherent Corp. Common Stock,Technology,34,0.0677,1.8,8.0,26.5,351.22,20260731,49,20260817
-7,LITE,Lumentum Holdings Inc. - Common Stock,Technology,21,0.0643,1.88,19.1,32.2,968.9,20260731,49,20260817
-8,MTRN,Materion Corporation,Basic Materials,49,0.0554,1.53,2.9,17.4,287.79,20260731,49,20260817
-9,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0525,1.3,24.2,26.3,994.79,20260731,49,20260817
-10,ASX,ASE Technology Holding Co.  Ltd. America,Technology,14,0.0505,1.14,6.2,3.9,39.91,20260731,49,20260817
+1,FBRX,Forte Biosciences  Inc.  - Common Stock,Healthcare,24,0.1189,1.0,0.0,61.9,76.88,20260731,50,20260818
+2,SNDK,Sandisk Corporation - Common Stock When-,Technology,8,0.088,1.0,27.9,16.9,1625.78,20260731,50,20260818
+3,MU,Micron Technology  Inc. - Common Stock,Technology,16,0.0695,1.0,8.3,8.7,940.76,20260731,50,20260818
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0747,1.46,1.7,10.8,216.0,20260731,50,20260818
+5,CRDO,Credo Technology Group Holding Ltd - Ord,Technology,29,0.0667,1.02,-0.7,16.0,245.97,20260731,50,20260818
+6,COHR,Coherent Corp. Common Stock,Technology,25,0.0693,1.8,-6.7,7.4,306.43,20260731,50,20260818
+7,MTRN,Materion Corporation,Basic Materials,44,0.0564,1.53,-6.0,9.1,264.03,20260731,50,20260818
+8,LITE,Lumentum Holdings Inc. - Common Stock,Technology,17,0.0646,1.88,6.4,14.1,873.31,20260731,50,20260818
+9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,11,0.0511,1.14,-5.8,-1.3,36.41,20260731,50,20260818
+10,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0531,1.3,10.1,12.6,903.68,20260731,50,20260818

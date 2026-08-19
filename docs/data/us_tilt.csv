@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,FBRX,Forte Biosciences  Inc.  - Common Stock,Healthcare,24,0.1189,1.0,0.0,61.9,76.88,20260731,50,20260818
-2,SNDK,Sandisk Corporation - Common Stock When-,Technology,8,0.088,1.0,27.9,16.9,1625.78,20260731,50,20260818
-3,MU,Micron Technology  Inc. - Common Stock,Technology,16,0.0695,1.0,8.3,8.7,940.76,20260731,50,20260818
-4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0747,1.46,1.7,10.8,216.0,20260731,50,20260818
-5,CRDO,Credo Technology Group Holding Ltd - Ord,Technology,29,0.0667,1.02,-0.7,16.0,245.97,20260731,50,20260818
-6,COHR,Coherent Corp. Common Stock,Technology,25,0.0693,1.8,-6.7,7.4,306.43,20260731,50,20260818
-7,MTRN,Materion Corporation,Basic Materials,44,0.0564,1.53,-6.0,9.1,264.03,20260731,50,20260818
-8,LITE,Lumentum Holdings Inc. - Common Stock,Technology,17,0.0646,1.88,6.4,14.1,873.31,20260731,50,20260818
-9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,11,0.0511,1.14,-5.8,-1.3,36.41,20260731,50,20260818
-10,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0531,1.3,10.1,12.6,903.68,20260731,50,20260818
+1,FBRX,Forte Biosciences  Inc.  - Common Stock,Healthcare,8,0.1186,1.0,0.2,51.6,76.9,20260731,49,20260819
+2,SNDK,Sandisk Corporation - Common Stock When-,Technology,18,0.0881,1.0,16.7,-1.3,1568.87,20260731,49,20260819
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0754,1.46,9.3,14.1,237.27,20260731,49,20260819
+4,COHR,Coherent Corp. Common Stock,Technology,24,0.0697,1.8,-19.2,-9.4,287.47,20260731,49,20260819
+5,MTRN,Materion Corporation,Basic Materials,33,0.057,1.53,-13.4,-3.8,245.22,20260731,49,20260819
+6,STX,Seagate Technology Holdings PLC - Ordina,Technology,1,0.0541,1.3,-5.2,-6.6,832.56,20260731,49,20260819
+7,HL,Hecla Mining Company Common Stock,Basic Materials,14,0.0441,1.0,13.5,34.3,20.54,20260731,49,20260819
+8,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.0511,1.14,-9.2,-10.9,35.66,20260731,49,20260819
+9,AMAT,Applied Materials  Inc. - Common Stock,Technology,5,0.0541,1.78,-9.5,-12.1,496.17,20260731,49,20260819
+10,DELL,Dell Technologies Inc. Class C Common St,Technology,9,0.0656,2.18,-9.7,8.3,437.55,20260731,49,20260819

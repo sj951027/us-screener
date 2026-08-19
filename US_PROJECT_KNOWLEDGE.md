@@ -1,6 +1,6 @@
 # US_PROJECT_KNOWLEDGE.md — 미국판 스크리너 지식 문서
 
-> 최종 갱신: 2026-07-12 · 이 문서가 이 repo 의 단일 기준(설계 세부는 US_SCREENER_DESIGN.md,
+> 최종 갱신: 2026-08-19 · 이 문서가 이 repo 의 단일 기준(설계 세부는 US_SCREENER_DESIGN.md,
 > 첫 스캔 근거는 research/RESEARCH_us_first_scan_20260712.md).
 > **한국판(dh-q7m3k)과 완전 별개 프로젝트** — 코드·데이터·유니버스·점수·표시를 절대 섞지 않는다.
 > 계승하는 것은 규율뿐이다.
@@ -46,10 +46,28 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
 | | valuation_rotate | 시총·주식수 순환 스냅샷(600/일, ~12일 한 바퀴) |
 | | **score_daily** | 매일 전 유니버스 점수·순위·팩터 (model,date,symbol PK) — OOS 판정 재료 |
 | us_market.db | market_daily | SPX·NDX·COMP·VIX·DXY·US10Y·USDKRW |
-| us_fundamentals.db | insider_tx | Form 4 내부자 P/S 거래(SEC 분기 구조화셋, 관계플래그·단가·**filed=PIT**, 분기 idempotent·회당 4분기 점진 백필 2019~) — 내부자 순매수 신호 재료. 2026-07-26 신설 |
-| us_fundamentals.db | earnings_events | 실적 발표일(8-K Item 2.02 판별 + 10-K/Q 폴백, **accepted 접수시각**으로 장전/장후 구분, filed≥2019, PK cik+accn append-only) — PEAD 이벤트 날짜. 2026-07-26 신설 |
-| us_fundamentals.db | xbrl_facts/cik_ticker | SEC XBRL 재무 벌크(주1회, 화이트리스트 12태그, end≥2019, **filed(공시일) 보존=PIT append-only**) — 저평가·SUE(PEAD)·재무모멘텀 재료. 2026-07-26 신설, 관측 전용 |
+| us_fundamentals.db | insider_tx | Form 4 내부자 P/S 거래(SEC 분기 구조화셋, 관계플래그·단가·**filed=PIT**, 분기 idempotent·회당 4분기 점진 백필 2019~) — 내부자 순매수 신호 재료. 2026-07-26 신설. **⚠️ 2026-08-19 실측 0행(SEC 403) — §7 참조** |
+| us_fundamentals.db | earnings_events | 실적 발표일(8-K Item 2.02 판별 + 10-K/Q 폴백, **accepted 접수시각**으로 장전/장후 구분, filed≥2019, PK cik+accn append-only) — PEAD 이벤트 날짜. 2026-07-26 신설. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
+| us_fundamentals.db | xbrl_facts/cik_ticker | SEC XBRL 재무 벌크(주1회, 화이트리스트 12태그, end≥2019, **filed(공시일) 보존=PIT append-only**) — 저평가·SUE(PEAD)·재무모멘텀 재료. 2026-07-26 신설, 관측 전용. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_ohlcv.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) ⚠️ 별도 us_short.db 아님 — 수집기가 us_ohlcv.db 에 적재(2026-07-18 문서 교정: 이 오기를 믿은 틸트 배선이 runner 에서 조용히 생략되는 버그 유발) |
+
+### §3-1. 실측 스냅샷 (2026-08-19, Release tar us-data.tar.gz · 러너 08-18 22:40 UTC 생성분)
+
+| DB | 크기 | quick_check | 주요 테이블 행수 |
+|---|---|---|---|
+| us_ohlcv.db | 640MB | ok | daily_ohlcv 4,688,607(max date 20260818·7,434심볼) · short_interest 1,538,414(max settle 20260731) · score_daily 92,082 · valuation_rotate 17,660 · sector_cache 6,128 |
+| us_seed.db | 37MB | ok | listing_daily 365,417 · listing_events 493 · index_membership 14,084 |
+| us_market.db | 0.3MB | ok | market_daily 5,472 (SPX 775행, 2026년 결손 6일=전부 미국 공휴일 → 결손 아님) |
+| **us_fundamentals.db** | **0.06MB** | ok | **xbrl_facts 0 · earnings_events 0 · insider_tx 0 · cik_ticker 0 — 전부 빈 테이블** |
+
+score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
+`us_mus_v0` 27거래일(20260713~20260818, 90,933행) · `us_rvdtc_a` 23거래일(20260717~20260818, 1,149행).
+
+> 관측 컬럼 주의(실측): score_daily 컬럼은 mom12/upratio63/size_amt 뿐 — §1 "검증 전 팩터는
+> 기록만" 규칙 대비 vol_cv·dd52w·rv63·dtc 가 빠져 있다. 다만 이들은 전부 가격/공매도 원천에서
+> **사후 PIT 재계산이 가능**하고(vol_cv·dd52w 는 매일 커밋되는 docs/data/us_latest.csv 의 git
+> 히스토리에도 남음), 재구성 불가한 '그날의 유니버스 구성'은 score_daily 에 있으므로 실질
+> 손실은 없다. 스키마 확장은 선택 사항이지 9월 전 필수 과제가 아니다.
 
 ## §4. 모델 상태
 
@@ -94,11 +112,35 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
   (h60 초과, 86주간앵커, 생존편향 미보정) · 짝차이 +0.93%p CI[-0.02,+1.91] = 기움.
   본구축 때 dd63 관측 컬럼으로 정식 검증 후보.
 
+- 2026-08-09 (매도 규칙 스캔): us_mus_v0 top50 매수 후 청산 시점 13규칙 비교
+  (research/RESEARCH_us_exit_scan_20260809.md · 96주간앵커 · in-sample · 생존편향 미보정 ·
+  창 중첩으로 CI 과소). ① **20일 내 조기청산은 어떤 규칙도 h20을 못 이김** — 타이트할수록
+  나쁨(TR10 −0.81%p · SL10 −0.59%p · TP10 −0.29%p, 전부 CI 0 포함). ② 순위이탈 조기매도도
+  이득 없음(RANK300_20 −0.08%p CI[−0.16,−0.01] = 근소하게 해로운 기움). ③ **보유 20/40/60일은
+  기간보정 시 무차별**(20d당 환산 초과 +2.85/+2.89/+2.51%p, 짝차이 CI 전부 0 포함) → 신호의
+  초과수익이 20일 이후에도 감쇠하지 않음(7/18 결과와 정합). 실무 함의는 "왕복비용이 아까울수록
+  긴 주기가 유리한 기움"이지 채택된 규칙이 아님. → **PREREGISTER 매도 규칙 후보 없음**
+  (단순 고정 보유 유지가 현 데이터 부합). 레짐 기반 청산은 이번에도 미측정.
+
+- 2026-08-19 (파이프라인 점검): Actions 35회 전부 성공 표시·라이브 페이지 date=20260818 정상.
+  그러나 **SEC 3종(XBRL·실적일·Form 4) 수집이 한 건도 적재되지 않은 상태**를 실측 발견
+  (§3-1). 원인은 Actions 로그 실측 — 세 수집기 모두 첫 요청부터
+  `403 Client Error: Forbidden` (company_tickers.json / submissions.zip / 2019q1_form345.zip).
+  세 수집기 전부 예외를 삼키고 exit 0(비치명 설계) → 워크플로는 녹색, 데이터는 0.
+  **"수집기 완료 = 데이터 존재"가 아니었다** — 7/26 기록의 "완료"는 코드 완료였고 적재 검증이
+  없었다. 교훈: 신규 수집기는 '행수 > 0' 게이트나 텔레그램 요약에 행수를 넣어 조용한 실패를
+  드러내야 한다. 조치는 §7 참조. 9월 본구축의 '직교 데이터' 전략은 이 복구에 의존.
+
 ## §6. 캘린더
 
 - **9월 본구축**: 더 쌓인 데이터로 스캔 재실행 → 후보 1~2개 PREREGISTER
   (유력 us_mus_v0, 대조 size제외판, 안정재 vol_cv 변형) → OOS 40거래일 판정.
   생존편향 보정(listing_events), size_amt→실시총 교체 검토, SEC XBRL 대량 작업.
+  - **선결(2026-08-19 추가)**: SEC 403 복구가 먼저다(§7). 지금 착수해도 XBRL 주1회·Form 4
+    분기 점진 백필이라 유의미한 양이 쌓이는 데 수 주가 걸린다. 복구가 9월 초까지 안 되면
+    **직교 데이터(SUE/PEAD·저평가·내부자) 후보는 9월 PREREGISTER 대상에서 제외**하고
+    가격 기반 후보만 동결한다 — 미검증 데이터를 급히 넣지 않는다.
+  - PREREGISTER 초안: research/PREREGISTER_us_202609_draft.md (2026-08-19 작성, 미동결).
 - 캘린더 공통: 한국판 8월 중순 v3 판정, 9월 wu 판정(§ dh-q7m3k PROJECT_KNOWLEDGE.md).
 
 ### §6-1. 용량 캘린더 (2026-07-26 점검)
@@ -117,4 +159,14 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
   rate limit 구멍은 `--retry-empty` 로 메움. 배당·분할 반영 수익률은 반드시 adj_close.
 - Actions 60일 비활성 시 스케줄 자동 정지 — 매일 CSV 커밋이 활동으로 잡혀 사실상 무관하나,
   장기 중단 후엔 Actions 탭에서 re-enable.
+- **SEC 403 (2026-08-19 실측·미해결)**: GitHub Actions 러너에서 sec.gov 3개 엔드포인트 전부
+  첫 요청부터 403. 같은 URL을 사용자 브라우저(가정용 IP·크롬 UA)와 별도 데이터센터 IP의
+  일반 UA 클라이언트로 확인하면 **둘 다 200** → 데이터센터 IP 자체가 원인일 가능성은 낮고
+  **User-Agent 형식이 유력 용의자**(추정). 현재 기본 UA
+  `us-screener research (github.com/sj951027; seok5139@gmail.com)` 는 괄호·세미콜론·URL 을 포함 —
+  SEC 권장 형식은 `이름 이메일` 단순형. 세 수집기 모두 `SEC_USER_AGENT` 환경변수를 이미
+  읽으므로 **코드 수정 0줄**로 시험 가능: 워크플로 `Run collectors` 스텝 env 에
+  `SEC_USER_AGENT: "us-screener seok5139@gmail.com"` 한 줄 추가 → 수동 실행 → 로그 확인.
+  실패해도 비치명(exit 0). 그래도 403이면 다음 후보는 Accept-Encoding 헤더 누락 → 그 다음은
+  러너 IP 대역 차단(이 경우 로컬/자가 러너 또는 다른 소스로 전환 검토).
 - 텔레그램: 그룹 chat_id 는 음수(-100…). 봇은 @유저명 전체로만 검색됨. getUpdates 404 = 토큰 오타.

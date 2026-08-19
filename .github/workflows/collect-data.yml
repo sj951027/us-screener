@@ -45,6 +45,9 @@ jobs:
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
           US_SEED_DB: ${{ github.workspace }}/us-screener-data/us_seed.db
+          # v2026-08-19: SEC 403 대응 — 기본 UA(괄호/세미콜론/URL 포함)가 차단 용의자.
+          #   SEC 권장 형식은 '이름 이메일' 단순형. 수집기 3종 모두 이 변수를 읽는다.
+          SEC_USER_AGENT: "us-screener seok5139@gmail.com"
         run: |
           python us_seed_collector.py
           python us_ohlcv_collector.py

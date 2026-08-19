@@ -85,6 +85,9 @@
       <p><b>vol_cv</b> — 거래량 변동계수(낮을수록 거래가 꾸준). 첫 스캔에서 유일하게 유의했던 거래량
       팩터지만 <b>점수에 안 들어가는 관측 컬럼</b>입니다(관측 우선 — 검증 전 가중 금지).</p>
       <p><b>52주고점%</b> — 1년 최고가 대비 낙폭. <b>시총$B</b> — 순환 수집이라 최대 ~2주 전 값(참고).</p>
+      <p><b>1주 상승 + 1개월 하락</b> 조합은 "중기 조정 중 단기 반등" 종목을 보는 <b>관측 렌즈</b>입니다.
+      2026-07-26 눌림목 스캔에서 관련 가설은 짝차이 +0.93%p <b>CI[−0.02,+1.91] — 0을 포함(기움, 채택 아님)</b>이었습니다.
+      필터는 눈으로 보기 위한 것이지 신호가 아닙니다.</p>
       <p class="note">⚙️ 유니버스 = 가드 통과 종목: 종가 ≥ $5 · 20일 평균 거래대금 ≥ $1M · 무변동 컷.
       수익률은 adj_close(분할·배당 조정) 기준. 컬럼 클릭 시 정렬.</p>
     </div>
@@ -99,6 +102,8 @@
     <span class="fbtn" data-f="m12pos">12-1모멘텀 +</span>
     <span class="fbtn" data-f="up60">상승일 ≥ 60%</span>
     <span class="fbtn" data-f="m1pos">1개월 상승</span>
+    <span class="fbtn" data-f="w1pos" title="최근 1주 수익률 &gt; 0 — 관측 렌즈(점수 미포함)">1주 상승</span>
+    <span class="fbtn" data-f="m1neg" title="최근 1개월 수익률 &lt; 0 — 관측 렌즈(점수 미포함)">1개월 하락</span>
     <span class="fbtn" data-f="big">거래대금 ≥ $10M</span>
     <span class="fbtn" data-f="nearhi">52주고점 −15% 이내</span>
     <span class="fbtn" data-f="sp500">S&amp;P500만</span>
@@ -141,6 +146,8 @@ const FILTERS = {
   m12pos: r => parseFloat(r['mom12_pct']) > 0,
   up60:   r => parseFloat(r['upratio63_pct']) >= 60,
   m1pos:  r => parseFloat(r['ret_1m_pct']) > 0,
+  w1pos:  r => parseFloat(r['ret_1w_pct']) > 0,
+  m1neg:  r => parseFloat(r['ret_1m_pct']) < 0,
   big:    r => parseFloat(r['amt20_musd']) >= 10,
   nearhi: r => parseFloat(r['dd52w_pct']) >= -15,
   sp500:  r => (r['idx']||'').includes('SP500'),

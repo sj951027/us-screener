@@ -37,6 +37,57 @@ PAGE_URL = "https://sj951027.github.io/us-screener/us.html"  # 전체 표(GitHub
 TILT_URL = "https://sj951027.github.io/us-screener/us_tilt.html"  # 급등형 틸트(v 2026-07-18)
 
 
+def _fmt_n(n):
+    """행수 축약: 1,234 → '1.2k', 1,672,410 → '167만'."""
+    if n is None:
+        return "?"
+    if n >= 10000:
+        return f"{n/10000:.0f}만"
+    if n >= 1000:
+        return f"{n/1000:.1f}k"
+    return str(n)
+
+
+def db_health():
+    """[v03 2026-08-22] 테이블별 행수 요약 한 줄 — '조용한 실패' 감시.
+    배경: SEC 3종이 403으로 35회 연속 0행 적재였는데 워크플로는 전부 녹색이었다
+    (US_PROJECT_KNOWLEDGE.md §5 2026-08-19). 수집기 완료 != 데이터 존재 —
+    핵심 테이블 행수를 매일 알림에 실어 사람 눈이 이상을 보게 한다.
+    빈 테이블은 ⚠️ 표시. 조회 실패는 비치명('?')."""
+    parts, warn = [], []
+
+    def q(db, sql, label, fmt=_fmt_n):
+        try:
+            c = sqlite3.connect(f"file:{DATA_DIR / db}?mode=ro", uri=True)
+            v = c.execute(sql).fetchone()[0]
+            c.close()
+            if not v:
+                warn.append(label)
+                return f"{label} ⚠️0"
+            return f"{label} {fmt(v)}"
+        except Exception:
+            return f"{label} ?"
+
+    parts.append(q("us_ohlcv.db", "SELECT COUNT(*) FROM daily_ohlcv", "시세"))
+    parts.append(q("us_ohlcv.db",
+                   "SELECT MAX(settlement_date) FROM short_interest", "공매도", str))
+    parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM xbrl_facts", "재무"))
+    parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM earnings_events", "실적일"))
+    parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM insider_tx", "내부자"))
+    try:  # 분할 재조정 잔여 큐(수집기 v2026-08-21) — 테이블 없으면 생략
+        c = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
+        nq = c.execute("SELECT COUNT(*) FROM adjust_queue").fetchone()[0]
+        c.close()
+        if nq:
+            parts.append(f"재조정대기 {nq}")
+    except Exception:
+        pass
+    line = "🗄 " + " · ".join(parts)
+    if warn:
+        line += f"\n⚠️ <b>빈 테이블</b>: {', '.join(warn)} — 수집 로그 확인 필요"
+    return line
+
+
 def build_message():
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
     dates = [d for (d,) in con.execute(
@@ -132,6 +183,10 @@ def build_message():
                         else " · 측정 대기")
                 lines.append(f"  {m} {_bar(len(dts))} {len(dts)}/40일{perf}")
         c2.close()
+    except Exception:
+        pass
+    try:  # [v03] DB 건강 요약 — 조용한 실패 감시(비치명)
+        lines += ["", db_health()]
     except Exception:
         pass
     lines += ["", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]

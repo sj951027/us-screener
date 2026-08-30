@@ -67,6 +67,13 @@ jobs:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
         run: python us_page_data.py
 
+      # v05 2026-08-30 데이터 확장 4차: 옵션 요약 스냅샷 — 소급 불가 데이터라 선제 적재.
+      #   page_data 뒤 = 오늘 score_daily 반영된 관측 모델 종목 포함. 비치명·휴장일 가드 내장.
+      - name: Options snapshot (관측 전용)
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+        run: python us_options_collector.py
+
       - name: Commit page data (GitHub Pages 갱신)
         run: |
           git config user.name "github-actions[bot]"

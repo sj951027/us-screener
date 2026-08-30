@@ -50,6 +50,7 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
 | us_fundamentals.db | earnings_events | 실적 발표일(8-K Item 2.02 판별 + 10-K/Q 폴백, **accepted 접수시각**으로 장전/장후 구분, filed≥2019, PK cik+accn append-only) — PEAD 이벤트 날짜. 2026-07-26 신설. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_fundamentals.db | xbrl_facts/cik_ticker | SEC XBRL 재무 벌크(주1회, 화이트리스트 12태그, end≥2019, **filed(공시일) 보존=PIT append-only**) — 저평가·SUE(PEAD)·재무모멘텀 재료. 2026-07-26 신설, 관측 전용. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_ohlcv.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) ⚠️ 별도 us_short.db 아님 — 수집기가 us_ohlcv.db 에 적재(2026-07-18 문서 교정: 이 오기를 믿은 틸트 배선이 runner 에서 조용히 생략되는 버그 유발) |
+| us_options.db | option_daily | 옵션 체인 요약 스냅샷(유동성 top500 ∪ 관측 모델 종목, 근월 1~2만기: call/put OI·거래량, ATM IV, 스큐). **소급 불가 데이터 → 2026-08-30 선제 적재 개시**(관측 전용). 한계: OI=전일 마감분, IV=마감후 호가 → 횡단면 랭킹용. patch_note/v05 |
 
 ### §3-1. 실측 스냅샷 (2026-08-19, Release tar us-data.tar.gz · 러너 08-18 22:40 UTC 생성분)
 

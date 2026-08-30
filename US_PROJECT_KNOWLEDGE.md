@@ -46,7 +46,7 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
 | | valuation_rotate | 시총·주식수 순환 스냅샷(600/일, ~12일 한 바퀴) |
 | | **score_daily** | 매일 전 유니버스 점수·순위·팩터 (model,date,symbol PK) — OOS 판정 재료 |
 | us_market.db | market_daily | SPX·NDX·COMP·VIX·DXY·US10Y·USDKRW |
-| us_fundamentals.db | insider_tx | Form 4 내부자 P/S 거래(SEC 분기 구조화셋, 관계플래그·단가·**filed=PIT**, 분기 idempotent·회당 4분기 점진 백필 2019~) — 내부자 순매수 신호 재료. 2026-07-26 신설. **⚠️ 2026-08-19 실측 0행(SEC 403) — §7 참조** |
+| us_fundamentals.db | insider_tx | Form 4 내부자 P/S 거래(SEC 분기 구조화셋, 관계플래그·단가·**filed=PIT**, 분기 idempotent·회당 4분기 점진 백필 2019~) — 내부자 순매수 신호 재료. 2026-07-26 신설. 403 해결 후 백필 진행(§3-1). **⚠️ 관계플래그(is_officer 등) 전 행 0 결함 실측(2026-08-30) → 수집기 v04 수정·파서 v2 자동 재백필 — §7·patch_note/v04** |
 | us_fundamentals.db | earnings_events | 실적 발표일(8-K Item 2.02 판별 + 10-K/Q 폴백, **accepted 접수시각**으로 장전/장후 구분, filed≥2019, PK cik+accn append-only) — PEAD 이벤트 날짜. 2026-07-26 신설. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_fundamentals.db | xbrl_facts/cik_ticker | SEC XBRL 재무 벌크(주1회, 화이트리스트 12태그, end≥2019, **filed(공시일) 보존=PIT append-only**) — 저평가·SUE(PEAD)·재무모멘텀 재료. 2026-07-26 신설, 관측 전용. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_ohlcv.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) ⚠️ 별도 us_short.db 아님 — 수집기가 us_ohlcv.db 에 적재(2026-07-18 문서 교정: 이 오기를 믿은 틸트 배선이 runner 에서 조용히 생략되는 버그 유발) |
@@ -202,6 +202,14 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   (대부분 백필 이전 실제 급등락 — 1회 재수집 후 자동 종결, 초회 ~4일에 걸쳐 소화).
   잔여 한계: 증분 창을 벗어난 과거 배당의 소급 드리프트(연 1~2%)는 미감지 — 필요시
   연 1회 전체 재백필로 보정(미결정).
+- **내부자 관계플래그 전 행 0 (2026-08-30 실측 → 같은 날 수정)**: insider_tx 858,373행
+  전체에서 is_officer/is_director/is_tenpct=0. 원인: 실데이터 REPORTINGOWNER 에는 불리언
+  컬럼이 없고 `RPTOWNER_RELATIONSHIP` 텍스트(OFFICER/DIRECTOR/TENPERCENTOWNER/OTHER)만
+  존재(SEC insider_transactions_readme §5.2 확인) — 수집기가 불리언 컬럼만 찾다 실패하면
+  조용히 0 적재. self-test 픽스처가 불리언 형식이라 통과해 결함이 가려짐("픽스처는
+  실데이터 형식을 복제해야 한다"는 교훈). 수정(v04): RELATIONSHIP 텍스트 파싱 폴백 +
+  실데이터형 픽스처 추가 + PARSER_VER 게이트로 전 분기 자동 재백필(회당 4분기,
+  idempotent — ~8일 소요). 상세 patch_note/v04_20260830.md.
 - **SEC 403 (2026-08-19 실측 → 2026-08-21 해결·원인=UA 형식 확정)**: GitHub Actions 러너에서 sec.gov 3개 엔드포인트 전부
   첫 요청부터 403. 같은 URL을 사용자 브라우저(가정용 IP·크롬 UA)와 별도 데이터센터 IP의
   일반 UA 클라이언트로 확인하면 **둘 다 200** → 데이터센터 IP 자체가 원인일 가능성은 낮고

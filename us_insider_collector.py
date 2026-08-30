@@ -55,6 +55,7 @@ UA = {"User-Agent": os.environ.get(
 GUARD_DAYS = 7
 START_Q = (2019, 1)
 CODES = {"P", "S"}
+PARSER_VER = "2"   # v04 2026-08-30: RPTOWNER_RELATIONSHIP 텍스트 파싱(플래그 버그 수정)
 
 DDL = [
     """CREATE TABLE IF NOT EXISTS insider_tx (
@@ -150,20 +151,37 @@ def parse_quarter_zip(zbytes, quarter):
     i_off = _col(h, "rptowner_isofficer", "isofficer", "officer")
     i_dir = _col(h, "rptowner_isdirector", "isdirector", "director")
     i_ten = _col(h, "rptowner_istenpercentowner", "istenpercent", "tenpercent")
+    i_rel = _col(h, "rptowner_relationship")
     if None in (i_acc, i_ocik):
         return None, f"REPORTINGOWNER 컬럼 미탐지: {h[:8]}"
+    if i_rel is None and i_off is None and i_dir is None and i_ten is None:
+        # v04: 실데이터(readme §5.2)에는 불리언 컬럼이 없고 RPTOWNER_RELATIONSHIP
+        # 텍스트뿐 — 그것마저 없으면 경고(플래그 0 적재, 행 자체는 보존)
+        print(f"  ⚠️ {quarter}: 관계 컬럼 미탐지(불리언·RELATIONSHIP 모두 없음) — 플래그 0 적재")
 
     def flag(r, i):
         if i is None or i >= len(r):
             return 0
         return 1 if r[i].strip().lower() in ("1", "true", "yes", "y") else 0
 
+    def rel_flags(r):
+        """불리언 컬럼 우선, 없으면 RPTOWNER_RELATIONSHIP 텍스트 파싱(v04 버그 수정:
+        실데이터에 불리언 컬럼이 없어 전 행 플래그 0으로 적재되던 결함)."""
+        if not (i_off is None and i_dir is None and i_ten is None):
+            return flag(r, i_off), flag(r, i_dir), flag(r, i_ten)
+        if i_rel is not None and i_rel < len(r):
+            up = r[i_rel].upper()
+            return (1 if "OFFICER" in up else 0, 1 if "DIRECTOR" in up else 0,
+                    1 if "TENPERCENT" in up else 0)
+        return 0, 0, 0
+
     own = {}
     for r in rows:
         try:
+            f_off, f_dir, f_ten = rel_flags(r)
             own.setdefault(r[i_acc].strip(),
                            (int(float(r[i_ocik])) if r[i_ocik].strip() else None,
-                            flag(r, i_off), flag(r, i_dir), flag(r, i_ten)))
+                            f_off, f_dir, f_ten))
         except Exception:
             continue
 
@@ -243,6 +261,17 @@ def load_quarter(con, session, quarter):
 
 def run(con, force=False, max_files=4):
     import requests
+    ver = con.execute(
+        "SELECT value FROM xbrl_meta WHERE key='insider_parser_ver'").fetchone()
+    if not ver or ver[0] != PARSER_VER:
+        n_done = con.execute("SELECT COUNT(*) FROM insider_files_done").fetchone()[0]
+        if n_done:
+            print(f"♻ 내부자 파서 v{PARSER_VER}(관계 플래그 수정) — "
+                  f"기존 {n_done}분기 재백필 예약(회당 {max_files}분기, idempotent)")
+        con.execute("DELETE FROM insider_files_done")
+        con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('insider_parser_ver', ?)",
+                    (PARSER_VER,))
+        con.commit()
     done = {r[0] for r in con.execute("SELECT quarter FROM insider_files_done")}
     todo = [q for q in quarters_until_today() if q not in done]
     if not todo:
@@ -296,6 +325,26 @@ def _fixture_zip():
     return buf.getvalue()
 
 
+def _fixture_zip_rel():
+    """실데이터 형식(insider_transactions_readme §5.2): 불리언 컬럼 없음,
+    RPTOWNER_RELATIONSHIP 텍스트만 존재."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("SUBMISSION.tsv", _tsv(
+            "ACCESSION_NUMBER\tFILING_DATE\tPERIOD_OF_REPORT\tISSUERCIK\tISSUERNAME\tISSUERTRADINGSYMBOL",
+            "acc-3\t14-MAY-2025\t12-MAY-2025\t320193\tApple Inc\tAAPL",
+            "acc-4\t15-MAY-2025\t13-MAY-2025\t789019\tMicrosoft\tMSFT"))
+        zf.writestr("REPORTINGOWNER.tsv", _tsv(
+            "ACCESSION_NUMBER\tRPTOWNERCIK\tRPTOWNERNAME\tRPTOWNER_RELATIONSHIP\tRPTOWNER_TITLE",
+            "acc-3\t333\tDOE JANE\tOfficer\tCFO",
+            "acc-4\t444\tROE RICHARD\tDirector,TenPercentOwner\t"))
+        zf.writestr("NONDERIV_TRANS.tsv", _tsv(
+            "ACCESSION_NUMBER\tNONDERIV_TRANS_SK\tTRANS_DATE\tTRANS_CODE\tTRANS_SHARES\tTRANS_PRICEPERSHARE\tSHRS_OWND_FOLWNG_TRANS",
+            "acc-3\t1\t12-MAY-2025\tP\t500\t190.0\t10500",
+            "acc-4\t2\t13-MAY-2025\tS\t800\t420.0\t9000"))
+    return buf.getvalue()
+
+
 def self_test():
     print("== self-test (오프라인) ==")
     ok = True
@@ -315,6 +364,13 @@ def self_test():
           and p[8] == "2025-02-26")
     s_ = [r for r in rows if r[9] == "S"][0]
     check("매도행: MSFT·이사플래그", s_[3] == "MSFT" and s_[6] == 1)
+
+    rows_r, err_r = parse_quarter_zip(_fixture_zip_rel(), "2025q2")
+    check("실데이터형(RELATIONSHIP 텍스트) 파싱 성공", err_r is None and len(rows_r) == 2)
+    pr = [r for r in rows_r if r[9] == "P"][0]
+    sr = [r for r in rows_r if r[9] == "S"][0]
+    check("'Officer' → is_officer=1", pr[5] == 1 and pr[6] == 0 and pr[7] == 0)
+    check("'Director,TenPercentOwner' → 이사+10% 플래그", sr[5] == 0 and sr[6] == 1 and sr[7] == 1)
 
     con = sqlite3.connect(":memory:")
     for ddl in DDL:

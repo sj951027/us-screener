@@ -69,6 +69,19 @@ def db_health():
             return f"{label} ?"
 
     parts.append(q("us_ohlcv.db", "SELECT COUNT(*) FROM daily_ohlcv", "시세"))
+    try:  # [v08] 최신일 완전성 — 부분 수집(2026-09-02 실측 53%)을 사람이 보게
+        c = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
+        d2 = [d for (d,) in c.execute("SELECT DISTINCT date FROM daily_ohlcv ORDER BY date DESC LIMIT 2")]
+        if len(d2) == 2:
+            n_t = c.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=?", (d2[0],)).fetchone()[0]
+            n_p = c.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=?", (d2[1],)).fetchone()[0]
+            ratio = n_t / n_p if n_p else 1.0
+            parts.append(f"최신일 {d2[0]} {n_t:,}행({ratio:.0%})")
+            if ratio < 0.9:
+                warn.append(f"시세 최신일 부분 수집 {ratio:.0%}")
+        c.close()
+    except Exception:
+        pass
     parts.append(q("us_ohlcv.db",
                    "SELECT MAX(settlement_date) FROM short_interest", "공매도", str))
     if (DATA_DIR / "us_shortvol.db").exists():  # [v07 2026-09-06] 일별 공매도 거래량 최신일
@@ -92,9 +105,21 @@ def db_health():
 
 
 def build_message():
+    """(메시지, 최신일, partial). partial=True 면 순위 없이 경고만(v08 — 반토막 유니버스 순위 전송 방지)."""
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
     dates = [d for (d,) in con.execute(
         "SELECT DISTINCT date FROM daily_ohlcv ORDER BY date")][-LOOKBACK:]
+    if len(dates) >= 2:  # [v08] 완전성 게이트 — us_page_data 와 같은 기준(전일의 90%)
+        n_t = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=? AND close IS NOT NULL", (dates[-1],)).fetchone()[0]
+        n_p = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=? AND close IS NOT NULL", (dates[-2],)).fetchone()[0]
+        if n_p and n_t / n_p < 0.9:
+            con.close()
+            msg = "\n".join([
+                "⚠️ <b>[US] 시세 부분 수집 의심</b>",
+                f"최신일 {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {n_t/n_p:.0%} (기준 90%)",
+                "오늘 순위·점수 적재는 생략됨(반토막 유니버스 박제 방지). 로그의 '⚠️ 배치 실패' 확인.",
+                "다음날 시세가 채워지면 Actions → Run workflow → repair_dates 에 이 날짜 입력."])
+            return msg, dates[-1], True
     raw = pd.read_sql(
         "SELECT symbol,date,close,adj_close,volume FROM daily_ohlcv WHERE date>=?",
         con, params=(dates[0],))
@@ -193,7 +218,7 @@ def build_message():
     except Exception:
         pass
     lines += ["", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]
-    return "\n".join(lines), ds[i]
+    return "\n".join(lines), ds[i], False
 
 
 def send(msg):
@@ -217,9 +242,12 @@ def main():
     if not OHLCV_DB.exists():
         print(f"us_ohlcv.db 없음({OHLCV_DB}) — 생략(비치명).")
         return
-    msg, latest = build_message()
+    msg, latest, partial = build_message()
     print(msg)
     if args.dry_run:
+        return
+    if partial:      # [v08] 부분 수집 경고는 휴장 가드와 무관하게 전송(조용한 실패 방지)
+        send(msg)
         return
     # ── 휴장일 가드 ──────────────────────────────────────────────────
     # 미국 공휴일에도 cron 은 돌지만 새 데이터가 없어 '전날 기준일' 중복 알림이
@@ -229,7 +257,11 @@ def main():
     from zoneinfo import ZoneInfo
     today_et = _dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y%m%d")
     if os.environ.get("TELEGRAM_FORCE", "").strip() != "1" and latest != today_et:
-        print(f"⏭ 휴장일 추정(최신 {latest} ≠ 오늘 ET {today_et}) — 전송 생략.")
+        print(f"⏭ 휴장일 추정(최신 {latest} ≠ 오늘 ET {today_et}) — 순위 전송 생략.")
+        # [v08] 평일인데 오늘 시세가 없으면 한 줄만 보낸다 — 휴장일이면 정상, 아니면 수집 실패
+        #   (리뷰 H4: 0행 수집일이 휴장일로 위장돼 아무도 몰랐던 구멍). 연 ~10회 휴장일 잡음은 감수.
+        if _dt.datetime.now(ZoneInfo("America/New_York")).weekday() < 5:
+            send(f"⏭ [US] 오늘(ET {today_et}) 시세 없음 — 최신 {latest}. 휴장일이면 정상, 아니면 수집 실패(로그 '증분 완료' 행수 확인)")
         return
     send(msg)
 

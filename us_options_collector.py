@@ -65,8 +65,20 @@ DDL = [
     "CREATE INDEX IF NOT EXISTS ix_opt_sym_date ON option_daily(symbol, date)",
     """CREATE TABLE IF NOT EXISTS snapshot_log (
         date TEXT PRIMARY KEY, planned INTEGER, done INTEGER, fail INTEGER,
-        seconds REAL, cut INTEGER)""",
+        seconds REAL, cut INTEGER, empty INTEGER)""",
 ]
+# v08: 기존 DB 의 snapshot_log 에 empty 컬럼 추가(없을 때만) — 8/31~9/4 행은 NULL 로 남김
+MIGRATIONS = ["ALTER TABLE snapshot_log ADD COLUMN empty INTEGER"]
+
+
+def apply_ddl(con):
+    for ddl in DDL:
+        con.execute(ddl)
+    for m in MIGRATIONS:
+        try:
+            con.execute(m)
+        except sqlite3.OperationalError:
+            pass  # 이미 있음
 
 
 def et_today():
@@ -205,8 +217,7 @@ def run(force=False, max_symbols=TOP_N):
               f"(휴장일/수집 전). --force 로 무시 가능")
         return
     con = sqlite3.connect(DB)
-    for ddl in DDL:
-        con.execute(ddl)
+    apply_ddl(con)
     prev = con.execute("""SELECT planned-cut, seconds FROM snapshot_log
                           WHERE date<? ORDER BY date DESC LIMIT 1""", (today8,)).fetchone()
     cap = plan_capacity(prev[0], prev[1]) if prev else None
@@ -217,7 +228,7 @@ def run(force=False, max_symbols=TOP_N):
     print(f"▶ 옵션 스냅샷 {today8} — 대상 {len(universe)}심볼"
           f"(유동성 top{max_symbols} ∪ 관측 모델), 만기 {DTE_MIN}~{DTE_MAX}일 최대 {MAX_EXPIRIES}개")
     t0 = time.time()
-    ok = fail = 0
+    ok = fail = empty = 0
     cut = 0
     for i, sym in enumerate(universe):
         if time.time() - t0 > BUDGET_SEC:
@@ -227,7 +238,14 @@ def run(force=False, max_symbols=TOP_N):
             break
         try:
             n = snapshot_symbol(yf, con, sym, today8)
+            if not n:
+                # v08 리뷰 M1: yfinance 는 오류 시 예외 대신 빈 만기 목록 () 을 주기도 한다 →
+                #   0행이 '성공도 실패도 아닌' 채 무음 결손(실측 8/31 planned 518·done 348·fail 0,
+                #   모델 종목 0/50). 1회 재시도 후에도 0이면 empty 로 센다.
+                time.sleep(1.0)
+                n = snapshot_symbol(yf, con, sym, today8)
             ok += 1 if n else 0
+            empty += 0 if n else 1
         except Exception:
             fail += 1
         if i % 50 == 0:
@@ -235,12 +253,15 @@ def run(force=False, max_symbols=TOP_N):
         time.sleep(SLEEP_SEC)
     con.commit()
     el = time.time() - t0
-    con.execute("INSERT OR REPLACE INTO snapshot_log VALUES (?,?,?,?,?,?)",
-                (today8, len(universe), ok, fail, el, cut))
+    con.execute("INSERT OR REPLACE INTO snapshot_log VALUES (?,?,?,?,?,?,?)",
+                (today8, len(universe), ok, fail, el, cut, empty))
     con.commit()
+    if universe and ok / len(universe) < 0.8:
+        print(f"⚠️ 옵션 스냅샷 완주율 {ok}/{len(universe)} = {ok/len(universe):.0%} < 80% "
+              f"(빈 체인 {empty}·예외 {fail}) — 이 날짜분은 결손 많음(소급 불가). rate limit 의심")
     rows, days = con.execute(
         "SELECT COUNT(*), COUNT(DISTINCT date) FROM option_daily").fetchone()
-    print(f"💾 option_daily 오늘 성공 {ok}심볼 · 실패 {fail} · 잘림 {cut} · "
+    print(f"💾 option_daily 오늘 성공 {ok}심볼 · 실패 {fail} · 빈체인 {empty} · 잘림 {cut} · "
           f"누적 {rows:,}행/{days}일 ({el:.0f}s)")
     print("✅ 옵션 스냅샷 — 관측 전용. OI=전일 마감분, IV=마감후 호가(랭킹용) 한계 유의.")
     con.close()
@@ -274,8 +295,7 @@ def self_test():
     check("현물가 불량 → None", compute_metrics(0, calls, puts) is None)
 
     con = sqlite3.connect(":memory:")
-    for ddl in DDL:
-        con.execute(ddl)
+    apply_ddl(con)
     row = ("20260830", "TEST", "2026-09-18", 19, 100.0, 30, 45, 6, 9, 0.3, 0.33, 0.05, 6)
     for _ in range(2):
         con.execute("INSERT OR REPLACE INTO option_daily VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", row)
@@ -287,8 +307,15 @@ def self_test():
     check("plan_capacity: 표본 부족/정보 없음 → None",
           plan_capacity(5, 100) is None and plan_capacity(None, None) is None)
     check("plan_capacity: 최저 100 보장", plan_capacity(20, 100000) == 100)
-    check("snapshot_log 테이블 생성",
-          con.execute("SELECT COUNT(*) FROM snapshot_log").fetchone()[0] == 0)
+    check("snapshot_log 테이블 생성(empty 컬럼 포함)",
+          [r[1] for r in con.execute("PRAGMA table_info(snapshot_log)")][-1] == "empty")
+    old = sqlite3.connect(":memory:")   # v08 마이그레이션: 구 스키마(6컬럼) DB 에 empty 추가
+    old.execute("CREATE TABLE snapshot_log (date TEXT PRIMARY KEY, planned INTEGER, done INTEGER, fail INTEGER, seconds REAL, cut INTEGER)")
+    old.execute("INSERT INTO snapshot_log VALUES ('20260831',518,348,0,235.1,0)")
+    apply_ddl(old); apply_ddl(old)
+    check("v08 마이그레이션: 구 snapshot_log 에 empty 컬럼 추가(재실행 무해)",
+          old.execute("SELECT empty FROM snapshot_log").fetchone() == (None,)
+          and old.execute("SELECT planned-cut, seconds FROM snapshot_log").fetchone() == (518, 235.1))
 
     # 유니버스: 픽스처 ohlcv/score_daily 로 가드·합집합 확인
     o = sqlite3.connect(":memory:")

@@ -8,9 +8,21 @@ on:
   schedule:
     - cron: '0 22 * * 1-5'
   workflow_dispatch:
+    inputs:
+      repair_dates:
+        # v08 2026-09-06: 부분 수집일(시세 일부 배치 누락)에 박제된 점수를 감사 로그와 함께
+        #   재계산 — 수동 전용(스케줄 실행은 절대 안 씀). 예: 20260902,20260903
+        description: 'score_daily 재계산할 날짜(YYYYMMDD, 콤마 구분) — 부분 수집일 복구 전용'
+        required: false
+        default: ''
 
 permissions:
   contents: write
+
+# v08: 스케줄과 수동 실행이 겹치면 같은 정본을 받아 마지막 업로드가 다른 run 의 진행을 지움 → 직렬화
+concurrency:
+  group: collect-us
+  cancel-in-progress: false
 
 jobs:
   collect:
@@ -33,11 +45,26 @@ jobs:
           # v2026-07-26 방어 강화: '다운로드는 됐는데 tar 가 손상'인 경우를 빈 상태
           # 새 시작과 구분 — 손상 tar 로 조용히 처음부터 재수집하면 몇 년치 정본을
           # 하루짜리로 덮어쓸 수 있다(치명). 손상이면 즉시 실패 → 주간 백업으로 수동 복구.
-          if gh release download data-store --pattern 'us-data.tar.gz' --dir .; then
+          # v08 2026-09-06: '자산이 없다'와 '다운로드가 실패했다'를 구분 — 네트워크/API 오류를
+          #   새 시작으로 오인하면 빈 DB 로 3년 정본을 덮어쓴다(리뷰 H1). 조회 실패·다운로드 실패는 중단.
+          set +e
+          names=$(gh release view data-store --json assets -q '.assets[].name' 2>view_err.txt); rc=$?
+          set -e
+          if [ $rc -ne 0 ]; then
+            if grep -qi "not found" view_err.txt; then
+              echo "릴리스 없음(최초) — 새로 시작"
+            else
+              cat view_err.txt; echo "❌ 릴리스 조회 실패(네트워크/API) — 빈 재시작 방지 중단"; exit 1
+            fi
+          elif echo "$names" | grep -qx 'us-data.tar.gz'; then
+            gh release download data-store --pattern 'us-data.tar.gz' --dir . || { echo "❌ 정본 다운로드 실패 — 빈 재시작 방지 중단"; exit 1; }
             tar xzf us-data.tar.gz || { echo "❌ us-data.tar.gz 손상 — 중단(빈 재시작 방지). us-data-weekly.tar.gz 로 복구 필요"; exit 1; }
+            cp us-data.tar.gz us-data-prev.tar.gz     # 주간 백업은 '직전 일일본'으로(오늘 run 이 오염돼도 백업은 무사)
+            echo "PREV_TAR_BYTES=$(stat -c%s us-data.tar.gz)" >> "$GITHUB_ENV"
           else
-            echo "이전 데이터 없음 — 새로 시작"
+            echo "자산 없음(릴리스만 존재) — 새로 시작"
           fi
+          echo "RUN_DOW=$(date -u +%u)" >> "$GITHUB_ENV"   # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4)
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 
@@ -68,7 +95,11 @@ jobs:
       - name: Build page data (docs/data/us_latest.csv)
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
-        run: python us_page_data.py
+          REPAIR_DATES: ${{ github.event.inputs.repair_dates }}
+        run: |
+          # v08: 수동 입력이 있을 때만 부분 수집일 점수 재계산(감사 로그 출력) — 그 다음 정상 적재
+          if [ -n "$REPAIR_DATES" ]; then python us_page_data.py --repair "$REPAIR_DATES"; fi
+          python us_page_data.py
 
       # v05 2026-08-30 데이터 확장 4차: 옵션 요약 스냅샷 — 소급 불가 데이터라 선제 적재.
       #   page_data 뒤 = 오늘 score_daily 반영된 관측 모델 종목 포함. 비치명·휴장일 가드 내장.
@@ -79,6 +110,7 @@ jobs:
         run: python us_options_collector.py --max-symbols 1000
 
       - name: Commit page data (GitHub Pages 갱신)
+        continue-on-error: true   # v08: 푸시 실패가 DB 업로드를 막지 않게(리뷰 H3) — 페이지는 다음날 따라잡음
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -118,14 +150,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tar czf us-data.tar.gz us-screener-data
+          # v08: 새 tar 가 직전의 50% 미만이면 정본 훼손 의심 — 업로드 중단(리뷰 H1 2차 방어)
+          new_bytes=$(stat -c%s us-data.tar.gz)
+          if [ -n "${PREV_TAR_BYTES:-}" ] && [ "$new_bytes" -lt $((PREV_TAR_BYTES / 2)) ]; then
+            echo "❌ 새 tar ${new_bytes}B < 직전 ${PREV_TAR_BYTES}B 의 50% — 정본 훼손 의심, 업로드 중단"; exit 1
+          fi
           gh release view data-store >/dev/null 2>&1 || gh release create data-store --title "US data store" --notes "수집 데이터 자동 보관용 (매일 갱신)"
           gh release upload data-store us-data.tar.gz --clobber
           echo "업로드 완료: $(du -h us-data.tar.gz | cut -f1)"
-          # 금요일(UTC)엔 주간 백업본도 별도 보관 — 매일본이 오염돼도 최대 1주 전으로 복구 가능
-          if [ "$(date -u +%u)" = "5" ]; then
-            cp us-data.tar.gz us-data-weekly.tar.gz
+          # 금요일(잡 시작 시점 UTC 요일)엔 주간 백업본 — v08: '직전 일일본'을 보관해 오늘 run 오염과 분리
+          if [ "${RUN_DOW:-$(date -u +%u)}" = "5" ]; then
+            if [ -f us-data-prev.tar.gz ]; then cp us-data-prev.tar.gz us-data-weekly.tar.gz; else cp us-data.tar.gz us-data-weekly.tar.gz; fi
             gh release upload data-store us-data-weekly.tar.gz --clobber
-            echo "주간 백업본 갱신(금요일)"
+            echo "주간 백업본 갱신(금요일, 직전 일일본)"
           fi
 
       - name: Failure alert (실패 시 텔레그램 한 줄)

@@ -196,6 +196,22 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   컨테이너에서 cdn.finra.org 차단이라 실파일 포맷은 첫 러너 로그로 확인해야 함.
   13F 는 느린 신호라 후순위, 옵션은 1년 후, 텍스트·추정치는 무료 소스 없음.
 
+- 2026-09-06 (전체 코드 리뷰 → v08 안전망, research/REVIEW_pipeline_20260906.md · patch_note/v08):
+  실측 결함 — **score_daily 20260902(1,766행=전일 53%)·20260903(2,328행)이 시세 부분 수집 상태로 박제**
+  (시세는 다음날 7일 창이 채웠으나 점수는 IGNORE 라 복구 불가, 그날 텔레그램 top10 도 오염).
+  코드 경로 결함 — 정본 다운로드 실패를 "새 시작"으로 오인해 빈 DB 로 덮어쓸 수 있는 경로(H1),
+  푸시 실패가 업로드를 건너뛰는 경로(H3), 0행 수집일이 휴장일로 위장(H4), 옵션 빈 체인 무음(8/31
+  348/518·실패 0), FINRA 잔고 표기 불일치로 클래스·우선주 dtc 결측, NDX100 40일 0행 무음,
+  yfinance 1심볼 청크 MultiIndex 0행, 0값 행 101개. **v08 로 한 번에 수정**(점수식 0-diff 확인):
+  완전성 게이트(전일 90% 미만이면 적재 생략 + 경고 알림) · `--repair` 수동 재계산(감사 로그) ·
+  워크플로 방어(자산/실패 구분·50% 크기 게이트·concurrency·주간백업=직전본) · 큐 굶음 수정
+  (event_checked·순서 split→cliff→div·승격) 등. **미적용(다음 라운드)**: xbrl `start` 컬럼 재적재
+  (M5, 분기 3개월값 유실 — SUE 스캔은 YTD 차분으로 우회 중), earnings accepted_et(M7), insider
+  cik 조인(M8, 심볼 자유입력 23% 유실). **사용자 할 일**: Run workflow → repair_dates
+  `20260902,20260903` 1회(관측 우선 원칙의 명시적 예외, 감사 로그 남음).
+  발견: page_data 가드(rv≥0.003·21일 무변동 ≤50%)와 PREREGISTER 1-2 문구("63일 전부 동일 종가")가
+  다름 — 동결 전 문구를 코드에 맞출 것.
+
 ## §6. 캘린더
 
 - **9월 본구축**: 더 쌓인 데이터로 스캔 재실행 → 후보 1~2개 PREREGISTER
@@ -256,11 +272,11 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   `SEC_USER_AGENT: "us-screener seok5139@gmail.com"` 한 줄 추가 → 수동 실행 → 로그 확인.
   실패해도 비치명(exit 0). 그래도 403이면 다음 후보는 Accept-Encoding 헤더 누락 → 그 다음은
   러너 IP 대역 차단(이 경우 로컬/자가 러너 또는 다른 소스로 전환 검토).
-- **분할 재조정 큐 굶음 (2026-09-06 실측·미해결·수정안 제안)**: adjust_queue 951행 중
+- **분할 재조정 큐 굶음 (2026-09-06 실측 → 같은 날 v08 로 수정, 러너 검증 대기)**: adjust_queue 951행 중
   cliff 775행이 08-24 등록 그대로 attempts=0, cliff_checked 0행, **MNST 20260811 절벽
   여전히 미수정**. 원인: ① process_queue 가 split>div>cliff 순 회당 200개 ② detect_events
   가 7일 창의 배당을 날짜 없이 'div' 등록 → 처리 후 다음 날 재등록(한 배당당 ~5회 전체
   재수집, 러너 #48 "이벤트 감지 387심볼") → div 만으로 상한 소진. 영향: 절벽 종목 점수
   오염 지속(현 top50 에는 없음, top300 에 8종목). 수정안: div 에 날짜 detail + div_checked
-  1회 처리, 순서 split→cliff→div, 필요 시 REPAIR_CAP 상향. 상세 research/RESEARCH_us_orth_scan_20260906.md.
+  1회 처리, 순서 split→cliff→div, 필요 시 REPAIR_CAP 상향 → **v08 적용**(event_checked·register_event 승격·배치 예외 attempts). backlog 775 는 회당 200 이라 ~4일 소화. 상세 research/RESEARCH_us_orth_scan_20260906.md.
 - 텔레그램: 그룹 chat_id 는 음수(-100…). 봇은 @유저명 전체로만 검색됨. getUpdates 404 = 토큰 오타.

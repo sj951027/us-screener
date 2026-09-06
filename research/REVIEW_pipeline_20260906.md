@@ -52,7 +52,7 @@ insider 분기 적재 idempotent, 옵션 plan_capacity 영구 축소 아님, req
 - us_shortvol_collector.py (첫 러너 실행 전, v07 에 추기): 시리즈 없는 우선주·소문자 접미 처리,
   403/5xx 연속 시 `❌` 출력, 0행 파일 done 미표기, self-test 10항목.
 
-## 제안 — v08 "안전망" 묶음 (승인 시 한 번에)
+## 적용 — v08 "안전망" 묶음 (2026-09-06 승인·적용, patch_note/v08_20260906.md)
 H1·H3·L4(워크플로), H2·M2·M10·L5(page_data·notify), H4·M3·M4·L1 + §7 큐 굶음(ohlcv 수집기),
 M1(옵션), M9·L3(seed). 각각 오프라인 self-test/픽스처 추가, 0-diff 확인(점수식 불변) 후 적용.
 M5(xbrl start 재적재)·M7(accepted_et)·M8(cik 조인)은 9월 후반 별도 라운드.

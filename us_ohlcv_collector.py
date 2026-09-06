@@ -34,6 +34,15 @@ us_ohlcv_collector.py — 미국 전체 상장 일봉 수집 (백필 + 일일 �
 
 원칙: 증분·idempotent·비치명(개별 심볼 실패는 건너뛰고 pending — 다음 실행이 재시도).
 ⚠️ 네트워크(yfinance) 필요: pip install yfinance
+
+[v08 2026-09-06 리뷰 반영 — patch_note/v08]
+  ① 큐 굶음 수정: 배당 이벤트를 날짜 없이 매일 재등록해(한 배당당 ~5회 전체 재수집) div 만으로
+     회당 상한 200 을 소진 → cliff 775건이 2주간 attempts=0(MNST 절벽 미수정 실측). 이벤트에
+     날짜를 붙여 event_checked 로 1회만 처리, 순서 split→cliff→div, 진짜 split 이 오면 승격.
+  ② 배치 fetch 예외 시에도 attempts 증가(무한 재시도 방지), 포기는 6회.
+  ③ 증분 창: 마지막 저장일 기준(MAX(date)−7d) — 7일 넘는 장애도 자동 치유.
+  ④ 평일 증분 0행이면 ⚠️ 명시(휴장일로 위장되던 조용한 실패).
+  ⑤ 단일 심볼 청크의 MultiIndex(yfinance 1.x) 처리, 0값 행(close/adj_close≤0) 저장 안 함.
 """
 import argparse
 import datetime as dt
@@ -54,6 +63,8 @@ BACKFILL_YEARS = 3
 CHUNK = 50            # yf.download 배치 크기 (보수적 — rate limit 대비)
 SLEEP_BETWEEN = 1.0   # 배치 간 대기(초)
 REPAIR_CAP = 200      # 회당 재조정(전체 재수집) 심볼 상한 — 남은 건 다음 실행이 처리
+GIVE_UP_ATTEMPTS = 6  # v08: 재조정 시도 상한(배치 예외도 세므로 3→6)
+REASON_PRI = {"split": 0, "cliff": 1, "div": 2}   # v08 처리 순서(분할 > 절벽 > 배당)
 # 절벽 스캔이 보는 정수 분할비 후보(정방향=액면병합, 역방향=액면분할). ±6% 허용.
 SPLIT_RATIOS = [2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 40, 50]
 
@@ -71,6 +82,9 @@ DDL = [
         attempts INTEGER DEFAULT 0)""",
     """CREATE TABLE IF NOT EXISTS cliff_checked (
         symbol TEXT NOT NULL, date TEXT NOT NULL, PRIMARY KEY (symbol, date))""",
+    # v08: 처리 완료한 분할/배당 이벤트(심볼·이벤트일·종류) — 7일 창에 남아 있어도 재등록 안 함
+    """CREATE TABLE IF NOT EXISTS event_checked (
+        symbol TEXT NOT NULL, date TEXT NOT NULL, kind TEXT NOT NULL, PRIMARY KEY (symbol, date, kind))""",
 ]
 
 
@@ -102,11 +116,13 @@ def store(con, df, symbol, replace=False):
     for idx, r in df.iterrows():
         try:
             c = float(r["Close"]) if r["Close"] == r["Close"] else None
-            if c is None:
+            if c is None or c <= 0:
+                continue
+            ac = float(r["Adj Close"]) if ("Adj Close" in df.columns and r["Adj Close"] == r["Adj Close"]) else c
+            if ac <= 0:      # v08: 0값 행은 수익률 inf 를 만든다(실측 101행) — 저장 안 함
                 continue
             rows.append((symbol, idx.strftime("%Y%m%d"),
-                         float(r["Open"]), float(r["High"]), float(r["Low"]), c,
-                         float(r["Adj Close"]) if "Adj Close" in df.columns else c,
+                         float(r["Open"]), float(r["High"]), float(r["Low"]), c, ac,
                          int(r["Volume"]) if r["Volume"] == r["Volume"] else 0))
         except Exception:
             continue
@@ -131,17 +147,46 @@ def fetch_chunk(symbols, start=None, period=None, actions=False):
 
 # ── v2026-08-21 분할 소급 재조정 ──────────────────────────────────────
 
+def sub_frame(df, sym, n_chunk):
+    """yf.download 결과에서 한 심볼의 DataFrame. v08: yfinance 1.x 는 티커 1개여도 MultiIndex 를
+    유지하므로 '청크 길이'가 아니라 '컬럼 구조'로 판단(리뷰 M3 — 1심볼 청크가 0행 무음이었음)."""
+    import pandas as pd
+    if isinstance(df.columns, pd.MultiIndex):
+        return df[sym].dropna(how="all")
+    return df.dropna(how="all")
+
+
 def detect_events(sub):
-    """7일 창 DataFrame 에서 분할/배당 이벤트 감지 → 'split'|'div'|None.
+    """7일 창 DataFrame 에서 분할/배당 이벤트 감지 → ('split'|'div', 'YYYYMMDD') | None.
+    v08: 이벤트 '날짜'를 함께 돌려줘 같은 이벤트가 창에 남아 있는 동안 재등록되지 않게 한다.
     (auto_adjust=False + actions=True 일 때만 컬럼 존재 — 없으면 None)"""
     try:
-        if "Stock Splits" in sub.columns and (sub["Stock Splits"].fillna(0) != 0).any():
-            return "split"
-        if "Dividends" in sub.columns and (sub["Dividends"].fillna(0) != 0).any():
-            return "div"
+        for col, kind in (("Stock Splits", "split"), ("Dividends", "div")):
+            if col in sub.columns:
+                hit = sub[col].fillna(0) != 0
+                if hit.any():
+                    return kind, sub.index[hit][-1].strftime("%Y%m%d")
     except Exception:
         pass
     return None
+
+
+def register_event(con, sym, kind, date8, now):
+    """v08 이벤트 등록: 이미 처리한 (sym,date,kind) 는 무시. 큐에 있으면 우선순위가 높을 때만 승격
+    (cliff 로 대기 중인 심볼에 진짜 split 이 오면 split 로). 반환: 등록/승격 여부."""
+    if con.execute("SELECT 1 FROM event_checked WHERE symbol=? AND date=? AND kind=?",
+                   (sym, date8, kind)).fetchone():
+        return False
+    row = con.execute("SELECT reason, detail FROM adjust_queue WHERE symbol=?", (sym,)).fetchone()
+    if row is None:
+        con.execute("INSERT INTO adjust_queue VALUES (?,?,?,?,0)", (sym, kind, date8, now))
+        return True
+    if REASON_PRI[kind] < REASON_PRI.get(row[0], 9):
+        # 승격: 기존 detail(절벽 날짜 등)은 잃어도 됨 — 전체 재수집이 절벽도 함께 고친다
+        con.execute("UPDATE adjust_queue SET reason=?, detail=?, queued_at=? WHERE symbol=?",
+                    (kind, date8, now, sym))
+        return True
+    return False
 
 
 def scan_cliffs(con):
@@ -170,7 +215,7 @@ def scan_cliffs(con):
     return out
 
 
-def _queue_fail(con, sym, reason, detail, max_attempts=3):
+def _queue_fail(con, sym, reason, detail, max_attempts=GIVE_UP_ATTEMPTS):
     """재수집 실패(0행·예외) 처리: 시도 횟수 증가, 3회째엔 포기 —
     큐에서 제거하고 cliff 는 checked 표기(상폐 심볼이 큐를 영구 점유하는 것 방지.
     데이터는 원래 값 그대로 남는다 — 잘못 덮어쓰는 일은 없음)."""
@@ -189,7 +234,8 @@ def process_queue(con, cap=REPAIR_CAP):
     reason='cliff' 는 cliff_checked 에 기록. 실패는 큐에 남아 다음 실행이 재시도."""
     todo = con.execute(
         "SELECT symbol, reason, detail FROM adjust_queue "
-        "ORDER BY reason DESC, queued_at LIMIT ?",   # 'split'>'div'>'cliff' — 분할 최우선
+        "ORDER BY CASE reason WHEN 'split' THEN 0 WHEN 'cliff' THEN 1 ELSE 2 END, queued_at "
+        "LIMIT ?",   # v08: 분할 > 절벽(50% 오염) > 배당(~1% 드리프트) — 배당이 절벽을 굶기지 않게
         (cap,)).fetchall()  # attempts 는 _queue_fail 이 관리
     if not todo:
         return 0
@@ -213,24 +259,30 @@ def process_queue(con, cap=REPAIR_CAP):
             df = fetch_chunk(syms, start=start)
         except Exception as e:
             print(f"  ⚠️ 재조정 배치 실패(다음 실행 재시도): {e}")
+            # v08: 배치 예외도 시도 횟수에 센다 — 안 세면 영구 무한 재시도(리뷰 M4)
+            con.executemany("UPDATE adjust_queue SET attempts = attempts + 1 WHERE symbol=?",
+                            [(t[0],) for t in batch])
+            con.commit()
             time.sleep(10)
             continue
         for sym, reason, detail in batch:
             try:
-                sub = df[sym].dropna(how="all") if len(syms) > 1 else df
+                sub = sub_frame(df, sym, len(syms))
                 n = store(con, sub, sym, replace=True)
                 if n > 0:
                     con.execute("DELETE FROM adjust_queue WHERE symbol=?", (sym,))
-                    if reason == "cliff" and detail:
-                        for dd in detail.split(","):
-                            con.execute(
-                                "INSERT OR IGNORE INTO cliff_checked VALUES (?,?)",
-                                (sym, dd))
+                    for dd in (detail or "").split(","):
+                        if not dd:
+                            continue
+                        if reason == "cliff":
+                            con.execute("INSERT OR IGNORE INTO cliff_checked VALUES (?,?)", (sym, dd))
+                        else:   # v08: 처리한 split/div 이벤트 — 7일 창에 남아 있어도 재등록 안 함
+                            con.execute("INSERT OR IGNORE INTO event_checked VALUES (?,?,?)", (sym, dd, reason))
                     fixed += 1
                 else:
                     _queue_fail(con, sym, reason, detail)
             except Exception:
-                _queue_fail(con, sym, reason, detail)  # 3회 후 포기(상폐 등)
+                _queue_fail(con, sym, reason, detail)  # GIVE_UP_ATTEMPTS 회 후 포기(상폐 등)
         con.commit()
         time.sleep(SLEEP_BETWEEN)
     print(f"[재조정] {fixed}심볼 완료 · 잔여 {n_left - fixed}")
@@ -256,9 +308,15 @@ def self_test():
     sub_div = pd.DataFrame({**base, "Adj Close": [91.43, 45.53],
                             "Dividends": [0.0, 0.5], "Stock Splits": [0.0, 0.0]}, index=idx)
     sub_none = pd.DataFrame({**base, "Adj Close": [91.43, 45.53]}, index=idx)
-    check("detect: split", detect_events(sub_split) == "split")
-    check("detect: div", detect_events(sub_div) == "div")
+    check("detect: split (종류, 이벤트일)", detect_events(sub_split) == ("split", "20260811"))
+    check("detect: div", detect_events(sub_div) == ("div", "20260811"))
     check("detect: actions 컬럼 없으면 None(구버전 호환)", detect_events(sub_none) is None)
+    # v08 sub_frame: MultiIndex 면 심볼로, 단일이면 그대로 (1심볼 청크 0행 무음 결함)
+    mi = pd.concat({"AAA": sub_none, "BBB": sub_none}, axis=1)
+    check("sub_frame: MultiIndex → 심볼 프레임", list(sub_frame(mi, "AAA", 2).columns) == list(sub_none.columns))
+    check("sub_frame: 단일 컬럼 프레임(1심볼) → 그대로", sub_frame(sub_none, "AAA", 1).shape == sub_none.shape)
+    mi1 = pd.concat({"AAA": sub_none}, axis=1)
+    check("sub_frame: 1심볼인데 MultiIndex(yfinance 1.x) → 심볼 프레임", sub_frame(mi1, "AAA", 1).shape == sub_none.shape)
 
     con = sqlite3.connect(":memory:")
     for d in DDL:
@@ -288,14 +346,30 @@ def self_test():
     n = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE symbol='MNSX'").fetchone()[0]
     check("REPLACE 후 행수 불변(중복 없음)", n == 2)
 
+    # store: 0값 행 저장 안 함(v08)
+    zero = pd.DataFrame({**base, "Close": [0.0, 45.53], "Adj Close": [0.0, 45.53]}, index=idx)
+    check("store: close/adj_close 0 행은 건너뜀", store(con, zero, "ZERO") == 1)
+
     # 큐 등록 idempotent
     for _ in range(2):
         con.execute("INSERT OR IGNORE INTO adjust_queue VALUES ('MNSX','cliff','20260811','t',0)")
     check("queue: 중복 등록 차단", con.execute("SELECT COUNT(*) FROM adjust_queue").fetchone()[0] == 1)
-    # 실패 3회 → 포기(큐 제거 + checked 표기, 다중 절벽 detail 전부)
-    for _ in range(3):
+    # v08 이벤트 등록: 같은 배당 2회 감지 → 1회만, cliff 대기 심볼에 split → 승격, 처리 완료 이벤트는 무시
+    check("event: div 첫 등록", register_event(con, "DIVX", "div", "20260811", "t") is True)
+    check("event: 같은 div 재감지는 등록 안 함(큐에 이미 있음)", register_event(con, "DIVX", "div", "20260811", "t") is False)
+    check("event: cliff 대기 심볼에 split 승격", register_event(con, "MNSX", "split", "20260811", "t") is True
+          and con.execute("SELECT reason FROM adjust_queue WHERE symbol='MNSX'").fetchone()[0] == "split")
+    check("event: split 대기 심볼에 div 는 강등 안 함", register_event(con, "MNSX", "div", "20260812", "t") is False)
+    con.execute("INSERT INTO event_checked VALUES ('DONE','20260811','div')")
+    check("event: 처리 완료한 이벤트는 재등록 안 함", register_event(con, "DONE", "div", "20260811", "t") is False)
+    order = [r[0] for r in con.execute(
+        "SELECT reason FROM adjust_queue ORDER BY CASE reason WHEN 'split' THEN 0 WHEN 'cliff' THEN 1 ELSE 2 END, queued_at")]
+    check("queue: 처리 순서 split → cliff → div", order == sorted(order, key=lambda r: REASON_PRI[r]))
+    # 실패 GIVE_UP_ATTEMPTS 회 → 포기(큐 제거 + checked 표기, 다중 절벽 detail 전부)
+    con.execute("UPDATE adjust_queue SET reason='cliff', detail='20260811,20260812' WHERE symbol='MNSX'")
+    for _ in range(GIVE_UP_ATTEMPTS):
         _queue_fail(con, "MNSX", "cliff", "20260811,20260812")
-    check("queue: 3회 실패 시 포기·큐 제거", con.execute(
+    check(f"queue: {GIVE_UP_ATTEMPTS}회 실패 시 포기·큐 제거", con.execute(
         "SELECT COUNT(*) FROM adjust_queue WHERE symbol='MNSX'").fetchone()[0] == 0)
     check("queue: 포기한 절벽 checked 표기(다중 날짜 전부)", con.execute(
         "SELECT COUNT(*) FROM cliff_checked WHERE symbol='MNSX'").fetchone()[0] == 2)
@@ -354,7 +428,7 @@ def main():
             n = 0
             for s in chunk:
                 try:
-                    sub = df[s].dropna(how="all") if len(chunk) > 1 else df
+                    sub = sub_frame(df, s, len(chunk))
                     n += store(con, sub, s)
                     con.execute("INSERT OR REPLACE INTO backfill_done VALUES (?,?)",
                                 (s, dt.datetime.now().isoformat(timespec='seconds')))
@@ -368,31 +442,43 @@ def main():
     else:
         # 일일 증분: 최근 7일 창(휴장·누락 자동 보완, 중복 IGNORE)
         #   + actions=True 로 창 안의 분할/배당 이벤트 감지(v2026-08-21 — 헤더 참조)
-        total, n_evt = 0, 0
+        total, n_evt, n_batch_fail = 0, 0, 0
         now = dt.datetime.now().isoformat(timespec="seconds")
+        # v08 ③: 창 시작 = 마지막 저장일 − 7d (마지막 저장일이 7일 넘게 오래됐으면 그만큼 넓어짐 —
+        #   Actions 장기 중단·연속 실패 뒤에도 자동 치유). 평소엔 기존 7일 창과 동일.
+        last = con.execute("SELECT MAX(date) FROM daily_ohlcv").fetchone()[0]
+        fetch_kw = {"period": "7d"}
+        if last:
+            last_d = dt.date(int(last[:4]), int(last[4:6]), int(last[6:]))
+            if (dt.date.today() - last_d).days > 7:
+                fetch_kw = {"start": (last_d - dt.timedelta(days=7)).isoformat()}
+                print(f"  ↺ 마지막 저장일 {last} 이 7일 넘게 오래됨 — 창을 {fetch_kw['start']} 부터로 넓힘")
         for i in range(0, len(symbols), CHUNK):
             chunk = symbols[i:i + CHUNK]
             try:
-                df = fetch_chunk(chunk, period="7d", actions=True)
+                df = fetch_chunk(chunk, actions=True, **fetch_kw)
             except Exception as e:
                 print(f"  ⚠️ 배치 {i//CHUNK} 실패 건너뜀: {e}")
+                n_batch_fail += 1
                 time.sleep(10)
                 continue
             for s in chunk:
                 try:
-                    sub = df[s].dropna(how="all") if len(chunk) > 1 else df
+                    sub = sub_frame(df, s, len(chunk))
                     total += store(con, sub, s)
                     ev = detect_events(sub)
-                    if ev:
-                        con.execute(
-                            "INSERT OR IGNORE INTO adjust_queue VALUES (?,?,?,?,0)",
-                            (s, ev, "", now))
+                    if ev and register_event(con, s, ev[0], ev[1], now):
                         n_evt += 1
                 except Exception:
                     pass
             con.commit()
             time.sleep(SLEEP_BETWEEN)
-        print(f"증분 완료: 신규 {total}행 · 이벤트 감지 {n_evt}심볼")
+        print(f"증분 완료: 신규 {total}행 · 이벤트 신규등록 {n_evt}심볼 · 배치 실패 {n_batch_fail}")
+        if total == 0 and dt.date.today().weekday() < 5:
+            print("⚠️ 평일인데 증분 0행 — 휴장일이 아니면 수집 실패(rate limit/네트워크). "
+                  "텔레그램 '시세 없음' 알림·건강줄 확인. 다음 실행이 창을 넓혀 자동 보충함")
+        if n_batch_fail:
+            print(f"⚠️ 배치 실패 {n_batch_fail}건 — 오늘 유니버스 일부 결측 가능(page_data 완전성 게이트가 걸러줌)")
 
         # 절벽 스캔(기존 오염 자가치유 — 오탐 무해, cliff_checked 로 반복 차단)
         try:

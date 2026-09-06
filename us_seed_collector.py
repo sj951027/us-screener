@@ -33,6 +33,7 @@ HERE = Path(__file__).resolve().parent
 DB = Path(os.environ.get("US_SEED_DB", "").strip()
           or (HERE / ".." / "us-screener-data" / "us_seed.db"))
 
+MIN_ROWS_PER_FILE = 1000   # v08: nasdaqlisted ~5천·otherlisted ~7천 — 이보다 작으면 절단/빈 본문
 NASDAQ_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 OTHER_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt"
 WIKI = {"SP500": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
@@ -100,7 +101,12 @@ def fetch_listings():
     for url, is_nq in ((NASDAQ_URL, True), (OTHER_URL, False)):
         r = requests.get(url, timeout=30)
         r.raise_for_status()
-        out += parse_symdir(r.text, is_nq)
+        part = parse_symdir(r.text, is_nq)
+        # v08 리뷰 L3: 한 파일이 빈 본문/절단이면 그날 스냅샷이 반쪽이 되고 수천 건 가짜
+        #   DISAPPEARED/NEW 이벤트가 영구 기록된다(IGNORE 라 정정 불가) → 파일당 최소 행수 검증
+        if len(part) < MIN_ROWS_PER_FILE:
+            raise RuntimeError(f"상장목록 파일 이상: {url.rsplit('/',1)[-1]} {len(part)}행 < {MIN_ROWS_PER_FILE} — 오늘 스냅샷 생략")
+        out += part
     # 심볼 중복(복수 거래소) 제거 — 첫 항목 유지
     seen, uniq = set(), []
     for row in out:
@@ -134,6 +140,8 @@ def fetch_membership():
                     break
             if syms:
                 res[idx_name] = syms
+            else:   # v08 리뷰 M9: NDX100 이 40일째 0행인데 경고가 없었음(표 구조 변경 추정)
+                print(f"  ⚠️ {idx_name} 멤버십: 구성종목 표를 못 찾음(표 {len(tables)}개 중 80~600행 symbol/ticker 열 없음) — 건너뜀")
         except Exception as e:
             print(f"  ⚠️ {idx_name} 멤버십 수집 실패 건너뜀: {e}")
     return res
@@ -147,10 +155,16 @@ def main():
     today = et_today()
 
     # 1) 상장 목록 스냅샷 + diff 이벤트
+    rows = None
     if con.execute("SELECT 1 FROM listing_daily WHERE date=? LIMIT 1", (today,)).fetchone():
         print(f"listing {today} 이미 적재 — 건너뜀(idempotent).")
     else:
-        rows = fetch_listings()
+        try:
+            rows = fetch_listings()
+        except Exception as e:   # v08: 상장목록 실패는 오늘 스냅샷만 생략(멤버십 수집은 계속)
+            print(f"  ⚠️ 상장목록 수집 실패 — 오늘 스냅샷·이벤트 생략(다음 실행 재시도): {e}")
+            rows = None
+    if rows is not None and not con.execute("SELECT 1 FROM listing_daily WHERE date=? LIMIT 1", (today,)).fetchone():
         prev_date = con.execute(
             "SELECT MAX(date) FROM listing_daily WHERE date<?", (today,)).fetchone()[0]
         con.executemany(

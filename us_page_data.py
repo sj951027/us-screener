@@ -10,9 +10,17 @@ us_notify_test.py 와 **동일한 점수 로직**(mom12+upratio63+size 순위합
 관측 컬럼**(관측 우선 원칙 — 검증 전 가중 금지).
 
 사용: python us_page_data.py            (GitHub Actions 가 매일 호출)
+      python us_page_data.py --asof 20260902            # 그날 기준으로만 계산해 출력(쓰기 없음, 점검용)
+      python us_page_data.py --repair 20260902,20260903 # 부분 수집일 점수 재계산(감사 로그) — 수동 전용
 환경: US_DATA_DIR (기본 ../us-screener-data)
 원칙: 비치명(데이터 없으면 생략) · CSV 이름의 콤마는 공백 치환(JS 단순 파서 호환)
+
+[v08 2026-09-06 완전성 게이트] 시세 수집이 일부 배치를 놓친 날(실측: 20260902 유니버스 1,766 =
+전일의 53%, J~Z 결측) 점수가 반토막 유니버스로 박제됐다(INSERT OR IGNORE 라 다음날 시세가
+채워져도 복구 불가). → 당일 시세 심볼 수가 전일의 90% 미만이면 CSV·score_daily·틸트 전부
+생략하고 ⚠️ 출력. 그런 날은 --repair 로 사람이 재계산한다(스케줄 실행은 절대 안 씀).
 """
+import argparse
 import os
 import sqlite3
 import sys
@@ -32,18 +40,51 @@ OUT = HERE / "docs" / "data" / "us_latest.csv"
 LOOKBACK = 260  # mom12(252) + 여유
 # 관측 적재용 모델 id — 점수식이 바뀌면 새 id 로 (기존 기록 불변, 매직넘버·소급수정 금지)
 MODEL_ID = "us_mus_v0"  # mom12 + upratio63 + size_amt 순위합 (2026-07-12 첫 배선)
+TILT_MODEL_ID = "us_rvdtc_a"
+COMPLETENESS_MIN = 0.9  # 당일 시세 심볼 수 / 전일 — 이 아래면 부분 수집으로 보고 적재 생략(v08)
 
 
-def main():
+def finra_key(sym):
+    """daily_ohlcv 표기 → FINRA 격주 잔고 파일 표기(BRK-B→BRKB, BAC-PB→BACPRB). v08 리뷰 M2:
+    표기 불일치로 클래스주·우선주 77종목의 dtc 가 조용히 결측이었다."""
+    return sym.replace("-P", "PR").replace("-", "")
+
+
+def completeness(con, d_today, d_prev):
+    """(당일 심볼 수, 전일 심볼 수, 비율). 전일 없으면 비율 1."""
+    n_t = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=? AND close IS NOT NULL", (d_today,)).fetchone()[0]
+    n_p = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=? AND close IS NOT NULL", (d_prev,)).fetchone()[0] if d_prev else 0
+    return n_t, n_p, (n_t / n_p if n_p else 1.0)
+
+
+def main(asof=None, repair=False):
     if not OHLCV_DB.exists():
         print(f"us_ohlcv.db 없음({OHLCV_DB}) — 생략(비치명).")
         return
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-    dates = [d for (d,) in con.execute(
-        "SELECT DISTINCT date FROM daily_ohlcv ORDER BY date")][-LOOKBACK:]
+    all_dates = [d for (d,) in con.execute(
+        "SELECT DISTINCT date FROM daily_ohlcv ORDER BY date")]
+    latest = all_dates[-1]
+    if asof:
+        if asof not in all_dates:
+            print(f"⚠️ {asof} 는 daily_ohlcv 에 없는 날짜 — 생략"); con.close(); return
+        all_dates = [d for d in all_dates if d <= asof]      # PIT: 그날 이후 열은 아예 안 읽음
+    dates = all_dates[-LOOKBACK:]
+    # ── v08 완전성 게이트 ───────────────────────────────────────────────
+    n_t, n_p, ratio = completeness(con, dates[-1], dates[-2] if len(dates) > 1 else None)
+    if ratio < COMPLETENESS_MIN:
+        print(f"⚠️ 시세 부분 수집 의심: {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {ratio:.0%} < {COMPLETENESS_MIN:.0%} "
+              + ("— 아직 시세가 채워지지 않아 REPAIR 거부(다음날 재시도)." if repair else
+                 f"— CSV·score_daily·틸트 적재 생략(반토막 유니버스 박제 방지). 다음날 시세가 채워지면 "
+                 f"`--repair {dates[-1]}` 로 재계산(수동)."))
+        con.close(); return
+    write_csv = (asof is None) or (asof == latest)   # 과거 날짜 재계산은 CSV(현재 표시)를 건드리지 않음
+    verb = "REPAIR" if repair else "IGNORE"
+    if repair:
+        print(f"🛠 REPAIR {dates[-1]}: 완전성 {n_t:,}/{n_p:,}={ratio:.0%} · 기존 score_daily 행 삭제 후 재계산(감사 로그)")
     raw = pd.read_sql(
-        "SELECT symbol,date,close,adj_close,volume FROM daily_ohlcv WHERE date>=?",
-        con, params=(dates[0],))
+        "SELECT symbol,date,close,adj_close,volume FROM daily_ohlcv WHERE date>=? AND date<=?",
+        con, params=(dates[0], dates[-1]))   # 상한 = asof (PIT: 그날 이후 행은 읽지 않음)
     # 시총(참고) — valuation_rotate 는 순환 수집이라 심볼별 최신값(최대 ~2주 전)
     try:
         mcap = dict(con.execute(
@@ -108,7 +149,7 @@ def main():
     names, member = {}, {}
     if SEED_DB.exists():
         s = sqlite3.connect(f"file:{SEED_DB}?mode=ro", uri=True)
-        names = {sym.replace(".", "-"): (nm or "") for sym, nm in s.execute(
+        names = {sym.replace(".", "-").replace("$", "-P"): (nm or "") for sym, nm in s.execute(
             "SELECT symbol,name FROM listing_daily WHERE date=(SELECT MAX(date) FROM listing_daily)")}
         # 지수 소속 뱃지 (S&P500·NDX100 — 판단축, 점수 미포함)
         try:
@@ -145,9 +186,12 @@ def main():
     out["top10pct"] = (out["rank"] <= max(1, len(out) // 10)).astype(int)
     out["n_universe"] = len(out)
     out["date"] = ds[i]
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    out.to_csv(OUT, index=False, encoding="utf-8-sig")
-    print(f"저장: {OUT} · {len(out):,}종목 · 기준일 {ds[i]}")
+    if write_csv:
+        OUT.parent.mkdir(parents=True, exist_ok=True)
+        out.to_csv(OUT, index=False, encoding="utf-8-sig")
+        print(f"저장: {OUT} · {len(out):,}종목 · 기준일 {ds[i]}")
+    else:
+        print(f"(--asof {ds[i]}: CSV 미저장 · {len(out):,}종목 · top10 {list(idx[:10])})")
 
     # ── 관측 적재: score_daily (가중치 0 — 기록만) ─────────────────────
     # 왜: CSV 는 덮어쓰기라, 본구축(9월~) OOS 판정 때 '그날 점수 → 이후 수익'
@@ -163,6 +207,14 @@ def main():
                         None if pd.isna(F.at[sym, "mom12"]) else float(F.at[sym, "mom12"]),
                         None if pd.isna(F.at[sym, "upratio63"]) else float(F.at[sym, "upratio63"]),
                         None if pd.isna(F.at[sym, "size_amt"]) else float(F.at[sym, "size_amt"])))
+    if repair:
+        n_del = wcon.execute("DELETE FROM score_daily WHERE model IN (?,?) AND date=?",
+                             (MODEL_ID, TILT_MODEL_ID, ds[i])).rowcount
+        print(f"🛠 REPAIR {ds[i]}: score_daily 기존 {n_del}행 삭제 → 재적재 {len(rows_sd)}행 (감사 로그)")
+    elif asof and asof != latest:
+        print(f"(--asof {ds[i]}: score_daily 미적재 — --repair 로만 씀)")
+        wcon.close()
+        return
     cur = wcon.executemany(
         "INSERT OR IGNORE INTO score_daily VALUES (?,?,?,?,?,?,?,?)", rows_sd)
     wcon.commit()
@@ -179,7 +231,6 @@ def main():
     #   평균수익은 기본 top10과 차이 없음 → '복권형'(변동 증폭) 관측. 문헌: vol anomaly.
     # ⚠️ 표시·기록 전용(가중치 0). 본구축(9월) PREREGISTER 전 판정·매수 근거 금지.
     # dtc = FINRA days_to_cover. 결제일+14일 지연 적용(PIT 보수 — 공표 지연 반영).
-    TILT_MODEL_ID = "us_rvdtc_a"
     TILT_POOL, TILT_TOP, SHORT_LAG_D = 50, 10, 14
     try:
         # ⚠️ 2026-07-18 버그픽스: 지식문서 §3의 'us_short.db'를 믿고 별도 파일을 찾았으나
@@ -213,7 +264,7 @@ def main():
                 pool = list(score.index[:TILT_POOL])
                 tf = pd.DataFrame(index=pool)
                 tf["rv63"] = w63.loc[pool].std(axis=1, ddof=1)
-                tf["dtc"] = pd.Series({s2: dtc_map.get(s2) for s2 in pool}, dtype=float)
+                tf["dtc"] = pd.Series({s2: dtc_map.get(finra_key(s2)) for s2 in pool}, dtype=float)  # v08 표기 정규화
                 tf = tf.dropna()
                 if len(tf) >= 25:   # 커버리지 절반 미만이면 순위 무의미 → 생략
                     tf["combo"] = tf["rv63"].rank(pct=True) + (1 - tf["dtc"].rank(pct=True))
@@ -236,8 +287,9 @@ def main():
             t_out["settle"] = settle
             t_out["n_pool"] = len(tilt)
             t_out["date"] = ds[i]
-            t_out.to_csv(HERE / "docs" / "data" / "us_tilt.csv",
-                         index=False, encoding="utf-8-sig")
+            if write_csv:
+                t_out.to_csv(HERE / "docs" / "data" / "us_tilt.csv",
+                             index=False, encoding="utf-8-sig")
             # score_daily 관측 적재(별도 model id — 풀 50 순위 기록, 본구축 판정 매칭용)
             wc2 = sqlite3.connect(OHLCV_DB)
             recs2 = [(TILT_MODEL_ID, ds[i], s2, rk2, float(tilt.at[s2, "combo"]),
@@ -257,8 +309,16 @@ def main():
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--asof", default=None, help="YYYYMMDD — 그날 기준 계산만(쓰기 없음)")
+    ap.add_argument("--repair", default=None, help="YYYYMMDD[,YYYYMMDD…] — 부분 수집일 재계산(삭제 후 적재, 수동 전용)")
+    args = ap.parse_args()
     try:
-        main()
+        if args.repair:
+            for d_ in [x.strip() for x in args.repair.split(",") if x.strip()]:
+                main(asof=d_, repair=True)
+        else:
+            main(asof=args.asof)
     except Exception as e:
         print(f"❌ 실패(비치명): {e}")
         sys.exit(0)

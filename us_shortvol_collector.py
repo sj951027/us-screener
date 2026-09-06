@@ -102,6 +102,8 @@ def parse_file(text, fallback_date, keep=None):
         if not sym:
             continue
         sym = norm_symbol(sym)   # FINRA 표기 → yfinance/daily_ohlcv 표기
+        if sym is None:
+            continue
         if keep is not None and sym not in keep:
             continue
         d8 = (g("date") or fallback_date).replace("-", "")[:8]
@@ -118,10 +120,12 @@ def norm_symbol(sym):
     '.' 표기도 방어. 규칙 밖 심볼은 그대로(유니버스 제한에서 자연 제외)."""
     import re
     s = sym.strip()
-    m = re.match(r"^([A-Z]+)p([A-Z])$", s)
+    m = re.match(r"^([A-Z]+)p([A-Z])?$", s)          # 우선주: ABRpD→ABR-PD, TYp→TY-P
     if m:
-        return f"{m.group(1)}-P{m.group(2)}"
-    return s.upper().replace("/", "-").replace(".", "-")
+        return f"{m.group(1)}-P{m.group(2) or ''}"
+    if re.search(r"[a-z]", s):                       # 그 밖의 소문자 접미(권리 r·when-issued w 등)는 버림
+        return None                                  #   — .upper() 하면 정규 5자 티커와 충돌 위험
+    return s.replace("/", "-").replace(".", "-")
 
 
 def universe_symbols():
@@ -164,6 +168,8 @@ def self_test():
     check("소수 거래량 파싱", any(r[1] == "AAPL" and abs(r[2] - 7632509.07524) < 1e-3 and abs(r[4] - 14537792.715407) < 1e-3 for r in rows))
     check("ShortVolume 과 ShortExemptVolume 열 혼동 없음", any(r[1] == "AAPL" and r[3] == 27953 for r in rows))
     check("norm_symbol 규칙", norm_symbol("AKO/A") == "AKO-A" and norm_symbol("BRK.B") == "BRK-B" and norm_symbol("AAPL") == "AAPL")
+    check("시리즈 없는 우선주 TYp→TY-P · 소문자 접미(ABCr)는 버림", norm_symbol("TYp") == "TY-P" and norm_symbol("ABCr") is None)
+    check("유니버스 매칭 0행 → None 아닌 빈 리스트(done 미표기 경로)", parse_file(fx, "20260904", keep={"NOPE"}) == [])
     check("헤더 감지 실패 → None", parse_file("foo,bar\n1,2\n", "20260904") is None)
     con = sqlite3.connect(":memory:")
     for d in DDL: con.execute(d)
@@ -195,6 +201,7 @@ def main():
     keep = universe_symbols()
     print(f"[일별 공매도 거래량] 후보 {len(cands)}일 (확보 {len(done)}파일, 유니버스 제한 {'있음' if keep else '없음'})")
     got = 0
+    codes = {}   # 상태코드 집계 — 404 는 휴장/미게시(정상), 403/5xx 가 연속이면 차단 의심
     now = dt.datetime.now().isoformat(timespec="seconds")
     for d in cands:
         ds = d.strftime("%Y%m%d")
@@ -202,22 +209,32 @@ def main():
             r = requests.get(URL.format(d=ds), headers=UA, timeout=30)
         except Exception as e:
             print(f"  ⚠️ {ds} 요청 실패(다음 실행 재시도): {e}")
+            codes["exc"] = codes.get("exc", 0) + 1
             time.sleep(3)
             continue
+        codes[r.status_code] = codes.get(r.status_code, 0) + 1
         if r.status_code != 200 or len(r.content) < 2000:
             time.sleep(SLEEP)
-            continue  # 휴장일/미게시
+            continue  # 휴장일/미게시(404) — 그 외 코드는 아래 집계로 드러남
         rows = parse_file(r.content.decode("utf-8", errors="replace"), ds, keep)
         if rows is None:
             RAW_DIR.mkdir(parents=True, exist_ok=True)
             (RAW_DIR / f"CNMSshvol{ds}.txt").write_bytes(r.content)
             print(f"  ⚠️ {ds} 포맷 감지 실패 — raw_finra/ 원본 보존")
             continue
-        cur = con.executemany("INSERT OR IGNORE INTO short_volume_daily VALUES (?,?,?,?,?,?)", rows)
+        if not rows:
+            print(f"  ⚠️ {ds} 헤더는 정상이나 유니버스 매칭 0행 — done 미표기(다음 실행 재시도)")
+            time.sleep(SLEEP)
+            continue
+        con.executemany("INSERT OR IGNORE INTO short_volume_daily VALUES (?,?,?,?,?,?)", rows)
         con.execute("INSERT OR REPLACE INTO shortvol_files_done VALUES (?,?,?)", (ds, len(rows), now))
         con.commit()
         got += 1
         time.sleep(SLEEP)
+    bad = {k: v for k, v in codes.items() if k not in (200, 404)}
+    if cands and got == 0 and bad and sum(bad.values()) >= min(5, len(cands)):
+        print(f"❌ 일별 공매도 거래량 — 후보 {len(cands)}일 전부 실패, 상태코드 {bad} (차단/UA 의심). "
+              f"비치명이지만 데이터는 0 — 텔레그램 '일별공매도' 최신일이 멈추면 이 줄을 확인할 것")
     n, nd, dmin, dmax = con.execute(
         "SELECT COUNT(*), COUNT(DISTINCT date), MIN(date), MAX(date) FROM short_volume_daily").fetchone()
     con.close()

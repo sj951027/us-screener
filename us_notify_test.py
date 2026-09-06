@@ -71,6 +71,9 @@ def db_health():
     parts.append(q("us_ohlcv.db", "SELECT COUNT(*) FROM daily_ohlcv", "시세"))
     parts.append(q("us_ohlcv.db",
                    "SELECT MAX(settlement_date) FROM short_interest", "공매도", str))
+    if (DATA_DIR / "us_shortvol.db").exists():  # [v07 2026-09-06] 일별 공매도 거래량 최신일
+        parts.append(q("us_shortvol.db",
+                       "SELECT MAX(date) FROM short_volume_daily", "일별공매도", str))
     parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM xbrl_facts", "재무"))
     parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM earnings_events", "실적일"))
     parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM insider_tx", "내부자"))

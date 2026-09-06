@@ -1,6 +1,6 @@
 # US_PROJECT_KNOWLEDGE.md — 미국판 스크리너 지식 문서
 
-> 최종 갱신: 2026-08-19 · 이 문서가 이 repo 의 단일 기준(설계 세부는 US_SCREENER_DESIGN.md,
+> 최종 갱신: 2026-09-06 · 이 문서가 이 repo 의 단일 기준(설계 세부는 US_SCREENER_DESIGN.md,
 > 첫 스캔 근거는 research/RESEARCH_us_first_scan_20260712.md).
 > **한국판(dh-q7m3k)과 완전 별개 프로젝트** — 코드·데이터·유니버스·점수·표시를 절대 섞지 않는다.
 > 계승하는 것은 규율뿐이다.
@@ -50,7 +50,8 @@ GitHub Actions (cron 22:00 UTC 월~금 = 미국 마감 후, 한국 아침 07시)
 | us_fundamentals.db | earnings_events | 실적 발표일(8-K Item 2.02 판별 + 10-K/Q 폴백, **accepted 접수시각**으로 장전/장후 구분, filed≥2019, PK cik+accn append-only) — PEAD 이벤트 날짜. 2026-07-26 신설. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_fundamentals.db | xbrl_facts/cik_ticker | SEC XBRL 재무 벌크(주1회, 화이트리스트 12태그, end≥2019, **filed(공시일) 보존=PIT append-only**) — 저평가·SUE(PEAD)·재무모멘텀 재료. 2026-07-26 신설, 관측 전용. **⚠️ 2026-08-19 실측 0행(SEC 403)** |
 | us_ohlcv.db | short_interest | FINRA 격주 공매도 (73파일 백필 완료) ⚠️ 별도 us_short.db 아님 — 수집기가 us_ohlcv.db 에 적재(2026-07-18 문서 교정: 이 오기를 믿은 틸트 배선이 runner 에서 조용히 생략되는 버그 유발) |
-| us_options.db | option_daily | 옵션 체인 요약 스냅샷(유동성 top500 ∪ 관측 모델 종목, 근월 1~2만기: call/put OI·거래량, ATM IV, 스큐). **소급 불가 데이터 → 2026-08-30 선제 적재 개시**(관측 전용). 한계: OI=전일 마감분, IV=마감후 호가 → 횡단면 랭킹용. patch_note/v05 |
+| us_shortvol.db | short_volume_daily | FINRA 일별 공매도 거래량(Reg SHO daily, CNMS 통합: short_vol/total_vol, daily_ohlcv 심볼 한정, 2023-05~ 백필). 격주 잔고(short_interest)와 다른 정보 = '그날 체결 중 공매도 비율'. 관측 전용. PIT: 거래일 D 파일은 D+1 앵커부터. **2026-09-06 신설**(patch_note/v07) |
+| us_options.db | option_daily | 옵션 체인 요약 스냅샷(유동성 top1000(v06 2026-09-06, 8/31~9/4 분은 top500) ∪ 관측 모델 종목, 근월 1~2만기: call/put OI·거래량, ATM IV, 스큐). **소급 불가 데이터 → 2026-08-30 선제 적재 개시**(관측 전용). 한계: OI=전일 마감분, IV=마감후 호가 → 횡단면 랭킹용. patch_note/v05 |
 
 ### §3-1. 실측 스냅샷 (2026-08-19, Release tar us-data.tar.gz · 러너 08-18 22:40 UTC 생성분)
 
@@ -161,6 +162,40 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   v02(8/21 분할 재조정)·v03(8/22 텔레그램 DB 건강 요약, 조용한 실패 감시) 작성.
   research/ 산출물·docs/data 자동 커밋·문서만의 변경은 제외(§5 로 충분).
 
+- 2026-09-06 (직교 3차 스캔 + 파이프라인 점검, research/RESEARCH_us_orth_scan_20260906.md):
+  ① **임원/이사 클러스터 매수**(90일 내 서로 다른 임원/이사 ≥2명 매수·순매수) 종목군의
+  EW 대비 초과 +1.02%p/20d 95%[+0.27,+1.79]·Bonf6[+0.03,+2.11] — 조건부 그룹 초과로는
+  프로젝트 최초 Bonferroni 통과. 대조군(10%주주만) +0.09 = 무신호, 창 60~180d·h5~h40
+  전부 양(+), 유동성 하위半 집중(소형주 편중). **단 임원/이사 판정의 2/3 가 2019~2023
+  플래그 기반 프록시**(2024q1~ 재백필 미완) → 재백필 완료 후 진짜 플래그로 재실행이 1순위.
+  ② mus top50 에 항/가산/제외로 넣으면 전부 음(−) 기움 — "전 유니버스 유의 ≠ top50 증분"
+  6회째. 함의: mus 의 항이 아니라 **별개 관측 모델 후보(가칭 us_insclu_a)** 로 다룬다(배선은
+  재실행 후·패치노트·승인 필요). ③ 실적발표 일정(EAP) 무신호, 발표 예정 제외는 해로운 기움.
+  ④ size_amt→실시총 교체 Δ −0.25%p CI 0 포함 → PREREGISTER §6-5 "이번 라운드 보류".
+  ⑤ 임원 순매도 제외는 해롭다(Δ −0.94%p*) — 매도 신호 불사용.
+  ⑥ 옵션 스냅샷 첫 5일 실측 깨끗(516/516·잘림 0·211s) → 8/30 합의대로 top1000 확대(v06).
+  ⑦ **분할 재조정 큐 굶음 결함 발견**(§7) — MNST 절벽 미수정, 수정안 제안(미적용).
+
+- 2026-09-06 (아키텍처 스캔, research/RESEARCH_us_arch_scan_20260906.md): "항 추가" 대신
+  **고르기 방식 11개**를 같은 잣대(114주간앵커·h20·EW 대비·블록부트스트랩·Bonf11)로 비교.
+  ① **indmom(업종 EW mom12 상위 20% 업종 안에서 base 점수 top50)**: EW 대비 +2.18%p
+  [−0.01,+4.24], **base 대비 짝차이 +0.91%p [+0.20,+1.67]\***, 연도별 +1.64/+2.30/+2.56,
+  설정(상위 10~30%·구성 5~20) 전부 같은 부호, 업종 17개 평균(반도체 단일 아님). 단
+  Bonf(99.5%) 하한 −0.1~0 = 경계 기움, base 와 상관 +0.92. → PREREGISTER v1_cv 대체 후보
+  `us_mus_v1_ind` 제안. ② base top10 은 평균 2배(+2.87)지만 MDD −32% = 집중의 대가.
+  ③ insclu 2종만 Bonf11 통과(base 와 무상관 = 분산 재료). ④ qvm·hi52·small·qlv·emom·
+  resmom 은 base 이하(emom·resmom 은 base 와 상관 0.82·0.96 = 같은 종목). 전부 in-sample·
+  상승장 한 구간·sector_cache 는 현재 분류(PIT 아님).
+
+- 2026-09-06 (새 재료 방향 결정 + 순발행 스캔): 사용자 결정 — "섞기(분산)"보다 **새 재료**
+  우선. ① 순발행(xbrl 주식수 12개월 변화, research/RESEARCH_us_nsi_scan_20260906.md): IC
+  −0.011 CI 0 포함, 십분위는 문헌 반대 부호(발행 많은 쪽이 더 오름, 2025 −1.99%p) → 무신호·
+  자동 탈락. 발행 대량 종목 제외도 이득 없음. ② **FINRA 일별 공매도 거래량 수집기 초안**
+  → **같은 날 사용자 승인으로 배선 완료(v07)**: us_shortvol_collector.py + 워크플로 1줄 + notify 건강
+  항목. 첫 러너 로그로 실파일 적재 확인 필요(research/draft_* 는 초안 잔재, 삭제 가능). 백필 2023-05~(용량 ~250MB 추정).
+  컨테이너에서 cdn.finra.org 차단이라 실파일 포맷은 첫 러너 로그로 확인해야 함.
+  13F 는 느린 신호라 후순위, 옵션은 1년 후, 텍스트·추정치는 무료 소스 없음.
+
 ## §6. 캘린더
 
 - **9월 본구축**: 더 쌓인 데이터로 스캔 재실행 → 후보 1~2개 PREREGISTER
@@ -221,4 +256,11 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   `SEC_USER_AGENT: "us-screener seok5139@gmail.com"` 한 줄 추가 → 수동 실행 → 로그 확인.
   실패해도 비치명(exit 0). 그래도 403이면 다음 후보는 Accept-Encoding 헤더 누락 → 그 다음은
   러너 IP 대역 차단(이 경우 로컬/자가 러너 또는 다른 소스로 전환 검토).
+- **분할 재조정 큐 굶음 (2026-09-06 실측·미해결·수정안 제안)**: adjust_queue 951행 중
+  cliff 775행이 08-24 등록 그대로 attempts=0, cliff_checked 0행, **MNST 20260811 절벽
+  여전히 미수정**. 원인: ① process_queue 가 split>div>cliff 순 회당 200개 ② detect_events
+  가 7일 창의 배당을 날짜 없이 'div' 등록 → 처리 후 다음 날 재등록(한 배당당 ~5회 전체
+  재수집, 러너 #48 "이벤트 감지 387심볼") → div 만으로 상한 소진. 영향: 절벽 종목 점수
+  오염 지속(현 top50 에는 없음, top300 에 8종목). 수정안: div 에 날짜 detail + div_checked
+  1회 처리, 순서 split→cliff→div, 필요 시 REPAIR_CAP 상향. 상세 research/RESEARCH_us_orth_scan_20260906.md.
 - 텔레그램: 그룹 chat_id 는 음수(-100…). 봇은 @유저명 전체로만 검색됨. getUpdates 404 = 토큰 오타.

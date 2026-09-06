@@ -54,6 +54,9 @@ jobs:
           python us_market_series.py
           python us_rotate_collector.py
           python us_short_collector.py
+          # v07 2026-09-06 데이터 확장 5차: FINRA 일별 공매도 거래량(Reg SHO daily) — 관측 전용,
+          #   2023-05 부터 회당 150파일 점진 백필(~6회), 완료 후엔 done 건너뜀. 비치명.
+          python us_shortvol_collector.py --backfill-from 2023-05-01
           # v2026-07-26 데이터 확장 1·2차: SEC 벌크 (둘 다 주간 가드 내장 — 실제 수집은
           #   주1회, 비치명·관측 전용). ① XBRL 재무 ② 실적 발표일(8-K Item 2.02).
           #   저평가/PEAD(SUE)/재무모멘텀 검증 재료(본구축 9월).
@@ -72,7 +75,8 @@ jobs:
       - name: Options snapshot (관측 전용)
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
-        run: python us_options_collector.py
+        # v06 2026-09-06: 첫 5일 실측(516/516 성공·잘림 0·211s)으로 확대 합의 조건 충족 → top1000
+        run: python us_options_collector.py --max-symbols 1000
 
       - name: Commit page data (GitHub Pages 갱신)
         run: |

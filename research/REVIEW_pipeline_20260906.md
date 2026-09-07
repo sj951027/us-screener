@@ -56,3 +56,10 @@ insider 분기 적재 idempotent, 옵션 plan_capacity 영구 축소 아님, req
 H1·H3·L4(워크플로), H2·M2·M10·L5(page_data·notify), H4·M3·M4·L1 + §7 큐 굶음(ohlcv 수집기),
 M1(옵션), M9·L3(seed). 각각 오프라인 self-test/픽스처 추가, 0-diff 확인(점수식 불변) 후 적용.
 M5(xbrl start 재적재)·M7(accepted_et)·M8(cik 조인)은 9월 후반 별도 라운드.
+
+## 2차 리뷰 (v08 적용 직후, 실DB 감사) — 추가 발견
+| # | 내용 | 조치 |
+|---|---|---|
+| H5 | **APH 2:1 분할(20260901) 절벽이 큐·cliff_checked 어디에도 없음** — 야후가 분할 직후 과거 행을 미조정으로 돌려줘 재수집이 "성공"으로 처리된 경우. 기존 로직은 cliff 사유면 그대로 영구 봉인 → 절벽이 영원히 안 고쳐짐 | v08 에 `cliff_still()` 추가(재수집 후 절벽 잔존이면 봉인 안 함·재시도), 절벽 스캔의 div→cliff 승격 |
+| — | xbrl EPS \|val\|>1000 201행 · earnings report_date>filed 14,669행 · insider 동일키 중복 28,998행 · rotate 주식수 vs xbrl 1.5배↑ 104/2,933 · close∉[low,high] 67행 | 연구 측 필터/다음 라운드(M5·M7·M8), 코드 변경 없음 |
+| — | 이상 없음: adj>close 0, high<low 0, SI 결제일 77개 연속, dtc 음수 0, 옵션 IV 결측 0.04%, cik→복수 티커는 멀티클래스 | — |

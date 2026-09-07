@@ -215,6 +215,18 @@ def scan_cliffs(con):
     return out
 
 
+def cliff_still(con, sym, d8):
+    """v08: 재수집 뒤에도 (sym, d8) 절벽이 남아 있는가. 야후는 분할 직후 1~2일간 과거 행을
+    아직 조정하지 않은 채 돌려주기도 한다(실측 APH 2:1 20260901 — 재수집 성공 처리됐지만
+    절벽 그대로). 이때 cliff_checked 로 봉인하면 영구 오염 → 남아 있으면 봉인하지 않는다."""
+    rows = con.execute("SELECT adj_close FROM daily_ohlcv WHERE symbol=? AND date<=? AND adj_close>0 "
+                       "ORDER BY date DESC LIMIT 2", (sym, d8)).fetchall()
+    if len(rows) < 2 or not rows[1][0]:
+        return False
+    r = rows[0][0] / rows[1][0]
+    return any(abs(r - t) / t < 0.06 for k in SPLIT_RATIOS for t in (1.0 / k, float(k)))
+
+
 def _queue_fail(con, sym, reason, detail, max_attempts=GIVE_UP_ATTEMPTS):
     """재수집 실패(0행·예외) 처리: 시도 횟수 증가, 3회째엔 포기 —
     큐에서 제거하고 cliff 는 checked 표기(상폐 심볼이 큐를 영구 점유하는 것 방지.
@@ -270,10 +282,14 @@ def process_queue(con, cap=REPAIR_CAP):
                 sub = sub_frame(df, sym, len(syms))
                 n = store(con, sub, sym, replace=True)
                 if n > 0:
+                    dates = [dd for dd in (detail or "").split(",") if dd]
+                    if reason == "cliff" and any(cliff_still(con, sym, dd) for dd in dates):
+                        # v08: 재수집했는데 절벽이 그대로(야후 미조정 지연) — 봉인하지 않고 재시도 대기
+                        _queue_fail(con, sym, reason, detail)
+                        print(f"  ↻ {sym} 재수집 후에도 절벽 잔존 — 봉인 안 함, 다음 실행 재시도")
+                        continue
                     con.execute("DELETE FROM adjust_queue WHERE symbol=?", (sym,))
-                    for dd in (detail or "").split(","):
-                        if not dd:
-                            continue
+                    for dd in dates:
                         if reason == "cliff":
                             con.execute("INSERT OR IGNORE INTO cliff_checked VALUES (?,?)", (sym, dd))
                         else:   # v08: 처리한 split/div 이벤트 — 7일 창에 남아 있어도 재등록 안 함
@@ -334,6 +350,9 @@ def self_test():
     check("scan: 2:1 절벽 검출", ("MNSX", "20260811", 0.498) in cl)
     check("scan: 정상 -30%는 미검출", not any(c[0] == "CRSH" for c in cl))
     check("scan: 검사완료 절벽 재등록 안 함", not any(c[0] == "SEEN" for c in cl))
+    # v08 cliff_still: 재수집 뒤 절벽 잔존 판정
+    check("cliff_still: 2:1 절벽 잔존 → True", cliff_still(con, "MNSX", "20260811") is True)
+    check("cliff_still: 정상 -30% → False", cliff_still(con, "CRSH", "20260811") is False)
 
     # store: IGNORE 는 기존 행 보존, REPLACE 는 덮어씀
     fixed = pd.DataFrame({**base, "Adj Close": [45.715, 45.53]}, index=idx)
@@ -487,8 +506,12 @@ def main():
             for sym, d, r in cliffs:
                 by_sym.setdefault(sym, []).append(d)
             for sym, dates in by_sym.items():   # 심볼당 1행, 절벽 전부 detail 에(결함 수정 v2)
-                con.execute("INSERT OR IGNORE INTO adjust_queue VALUES (?,?,?,?,0)",
-                            (sym, "cliff", ",".join(sorted(dates)), now))
+                cur = con.execute("INSERT OR IGNORE INTO adjust_queue VALUES (?,?,?,?,0)",
+                                  (sym, "cliff", ",".join(sorted(dates)), now))
+                if cur.rowcount == 0:   # v08: 'div' 로 대기 중이면 cliff 로 승격(처리 순서상 앞으로)
+                    con.execute("UPDATE adjust_queue SET reason='cliff', detail=?, queued_at=? "
+                                "WHERE symbol=? AND reason='div'",
+                                (",".join(sorted(dates)), now, sym))
             con.commit()
             if cliffs:
                 print(f"[절벽 스캔] 의심 {len(cliffs)}건 큐 등록 "

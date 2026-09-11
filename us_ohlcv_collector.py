@@ -43,6 +43,13 @@ us_ohlcv_collector.py — 미국 전체 상장 일봉 수집 (백필 + 일일 �
   ③ 증분 창: 마지막 저장일 기준(MAX(date)−7d) — 7일 넘는 장애도 자동 치유.
   ④ 평일 증분 0행이면 ⚠️ 명시(휴장일로 위장되던 조용한 실패).
   ⑤ 단일 심볼 청크의 MultiIndex(yfinance 1.x) 처리, 0값 행(close/adj_close≤0) 저장 안 함.
+
+[v09 2026-09-11 2차 수집 — patch_note/v09]
+  실측(09-11 러너 로그): '배치 실패 0'인데 최신일 20260910 행이 5,226/6,558 심볼에만 있었고, 정렬 순서 뒤쪽
+  두 분위(S~Z)에서 86~89% 결측(TSLA·TSM·UNH·XOM 포함). 직후 다른 수집기에서 야후 429/401(크럼 거부).
+  즉 예외 없이 '조용히' 당일 행이 빠지는 형태라 배치 실패 카운터로는 안 잡힌다. 다음날 7일 창이 전날을 채우므로
+  DB 는 결국 완결되지만 그날의 점수 적재가 비게 된다(us_page_data v08 게이트). 원인(스로틀 vs 캐시)은 미확정 →
+  둘 다에 걸리도록: 증분 뒤 최신일 결측 심볼만 RETRY_WAIT_S 쉬고 start= 명시(range=7d 와 다른 URL)로 작은 배치 재요청.
 """
 import argparse
 import datetime as dt
@@ -64,6 +71,12 @@ CHUNK = 50            # yf.download 배치 크기 (보수적 — rate limit 대�
 SLEEP_BETWEEN = 1.0   # 배치 간 대기(초)
 REPAIR_CAP = 200      # 회당 재조정(전체 재수집) 심볼 상한 — 남은 건 다음 실행이 처리
 GIVE_UP_ATTEMPTS = 6  # v08: 재조정 시도 상한(배치 예외도 세므로 3→6)
+# v09 2차 수집(헤더 참조) — 증분 직후 최신일 결측 심볼만 재요청
+RETRY_MIN_FRAC = 0.9  # 최신일 수집 심볼 / 대상 — 이 미만이면 2차 수집(us_page_data 완전성 게이트와 같은 기준)
+RETRY_WAIT_S = 90     # 2차 수집 전 대기(초) — 스로틀 해제 여유
+RETRY_CHUNK = 20      # 2차 배치 크기(1차 50 보다 작게)
+RETRY_SLEEP = 3.0     # 2차 배치 간 대기(초)
+STRAY_FRAC = 0.1      # 심볼 수가 최근 최대의 이 비율 미만인 날짜 = 잔행(휴장일에 흘린 1~2행) → 거래일로 안 침
 REASON_PRI = {"split": 0, "cliff": 1, "div": 2}   # v08 처리 순서(분할 > 절벽 > 배당)
 # 절벽 스캔이 보는 정수 분할비 후보(정방향=액면병합, 역방향=액면분할). ±6% 허용.
 SPLIT_RATIOS = [2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 40, 50]
@@ -225,6 +238,51 @@ def cliff_still(con, sym, d8):
         return False
     r = rows[0][0] / rows[1][0]
     return any(abs(r - t) / t < 0.06 for k in SPLIT_RATIOS for t in (1.0 / k, float(k)))
+
+
+def missing_latest(con, symbols):
+    """v09: (최신 거래일, 전일, 결측 심볼 목록, 대상 수). 결측 = 전일 행은 있는데 최신일 행이 없는 유니버스 심볼.
+    심볼 수가 최근 25일 최대의 STRAY_FRAC 미만인 잔행 날짜(휴장일에 흘린 1~2행)는 거래일로 치지 않는다 —
+    최신 행 날짜가 잔행이면 그 앞의 진짜 거래일을 최신일로 본다."""
+    rows = con.execute(
+        "SELECT date, COUNT(*) FROM daily_ohlcv GROUP BY date ORDER BY date DESC LIMIT 25").fetchall()
+    if len(rows) < 2:
+        return None, None, [], 0
+    peak = max(n for _, n in rows)
+    real = [d for d, n in rows if n >= STRAY_FRAC * peak]
+    if len(real) < 2:
+        return None, None, [], 0
+    d_t, d_p = real[0], real[1]
+    have = {s for (s,) in con.execute("SELECT symbol FROM daily_ohlcv WHERE date=?", (d_t,))}
+    prev = {s for (s,) in con.execute("SELECT symbol FROM daily_ohlcv WHERE date=?", (d_p,))}
+    want = set(symbols) & prev
+    return d_t, d_p, sorted(want - have), len(want)
+
+
+def retry_missing(con, miss, start, now):
+    """v09 2차 수집: 결측 심볼만 RETRY_CHUNK 씩 start= 명시로 재요청(저장 IGNORE·이벤트 등록 동일). (저장 행수, 배치 실패 수)."""
+    got, fails = 0, 0
+    for i in range(0, len(miss), RETRY_CHUNK):
+        chunk = miss[i:i + RETRY_CHUNK]
+        try:
+            df = fetch_chunk(chunk, start=start, actions=True)
+        except Exception as e:
+            fails += 1
+            print(f"  ⚠️ 2차 배치 {i // RETRY_CHUNK} 실패 건너뜀: {e}")
+            time.sleep(10)
+            continue
+        for s in chunk:
+            try:
+                sub = sub_frame(df, s, len(chunk))
+                got += store(con, sub, s)
+                ev = detect_events(sub)
+                if ev:
+                    register_event(con, s, ev[0], ev[1], now)
+            except Exception:
+                pass
+        con.commit()
+        time.sleep(RETRY_SLEEP)
+    return got, fails
 
 
 def _queue_fail(con, sym, reason, detail, max_attempts=GIVE_UP_ATTEMPTS):
@@ -392,6 +450,47 @@ def self_test():
         "SELECT COUNT(*) FROM adjust_queue WHERE symbol='MNSX'").fetchone()[0] == 0)
     check("queue: 포기한 절벽 checked 표기(다중 날짜 전부)", con.execute(
         "SELECT COUNT(*) FROM cliff_checked WHERE symbol='MNSX'").fetchone()[0] == 2)
+    # v09 2차 수집: 최신일 결측 판정(잔행 날짜 제외) + 가짜 fetch 로 보충
+    con9 = sqlite3.connect(":memory:")
+    for d in DDL:
+        con9.execute(d)
+    syms9 = [f"S{i:02d}" for i in range(12)]
+    rows9 = [(s, "20260909", 0, 0, 0, 10.0, 10.0, 1) for s in syms9]
+    rows9 += [(s, "20260910", 0, 0, 0, 11.0, 11.0, 1) for s in syms9[:8]]      # 당일 8/12 만 수집
+    rows9 += [("S00", "20260911", 0, 0, 0, 12.0, 12.0, 1)]                      # 잔행(휴장일 1행)
+    con9.executemany("INSERT INTO daily_ohlcv VALUES (?,?,?,?,?,?,?,?)", rows9)
+    d_t, d_p, miss, n_want = missing_latest(con9, syms9)
+    check("missing: 잔행 날짜(1행) 를 최신일로 안 침", (d_t, d_p) == ("20260910", "20260909"))
+    check("missing: 전일엔 있고 최신일에 없는 심볼", (miss, n_want) == (["S08", "S09", "S10", "S11"], 12))
+    check("missing: 유니버스 밖 심볼 제외", missing_latest(con9, syms9[:10])[2] == ["S08", "S09"])
+    only_stray = sqlite3.connect(":memory:")
+    for d in DDL:
+        only_stray.execute(d)
+    only_stray.executemany("INSERT INTO daily_ohlcv VALUES (?,?,?,?,?,?,?,?)",
+                           [(s, d9, 0, 0, 0, 10.0, 10.0, 1) for d9 in ("20260908", "20260909") for s in syms9]
+                           + [("S00", "20260910", 0, 0, 0, 1, 1, 1)])
+    check("missing: 최신 행 날짜가 잔행(휴장일 실행)이면 직전 거래일 기준·결측 없음",
+          missing_latest(only_stray, syms9)[:3] == ("20260909", "20260908", []))
+    g = globals()
+    real_fetch, real_sleep = g["fetch_chunk"], time.sleep
+    calls = []
+
+    def fake_fetch(symbols, start=None, period=None, actions=False):
+        calls.append((list(symbols), start))
+        i9 = pd.to_datetime(["2026-09-10"])
+        one = pd.DataFrame(dict(Open=[1.0], High=[1.0], Low=[1.0], Close=[11.0], Volume=[5],
+                                **{"Adj Close": [11.0], "Dividends": [0.0], "Stock Splits": [0.0]}), index=i9)
+        return pd.concat({s_: one for s_ in symbols}, axis=1)
+    g["fetch_chunk"], time.sleep = fake_fetch, lambda *_: None
+    try:
+        got, fails = retry_missing(con9, miss, "2026-09-03", "t")
+    finally:
+        g["fetch_chunk"], time.sleep = real_fetch, real_sleep
+    check("retry: 결측 4심볼 → 4행 저장·실패 0", (got, fails) == (4, 0))
+    check("retry: start= 명시로 요청", bool(calls) and all(c[1] == "2026-09-03" for c in calls))
+    check("retry: 보충 뒤 결측 0", missing_latest(con9, syms9)[2] == [])
+    check("retry: 기존 행 보존(IGNORE)", con9.execute(
+        "SELECT close FROM daily_ohlcv WHERE symbol='S00' AND date='20260910'").fetchone()[0] == 11.0)
     print("✅ self-test 통과" if ok else "❌ self-test 실패")
     sys.exit(0 if ok else 1)
 
@@ -498,6 +597,25 @@ def main():
                   "텔레그램 '시세 없음' 알림·건강줄 확인. 다음 실행이 창을 넓혀 자동 보충함")
         if n_batch_fail:
             print(f"⚠️ 배치 실패 {n_batch_fail}건 — 오늘 유니버스 일부 결측 가능(page_data 완전성 게이트가 걸러줌)")
+
+        # v09 2차 수집 — 최신일 결측 심볼만(원인 미확정: 스로틀/캐시 둘 다 대응 — 잠시 쉬고 start= 명시 URL 로 재요청)
+        try:
+            d_t, d_p, miss, n_want = missing_latest(con, symbols)
+            n_have = n_want - len(miss)
+            if d_t and n_want and n_have / n_want < RETRY_MIN_FRAC:
+                print(f"⚠️ 최신일 {d_t} 수집 {n_have:,}/{n_want:,}심볼({n_have / n_want:.0%} < {RETRY_MIN_FRAC:.0%}) "
+                      f"— 결측 {len(miss):,}심볼 {RETRY_WAIT_S}s 뒤 2차 수집")
+                time.sleep(RETRY_WAIT_S)
+                d_t_d = dt.date(int(d_t[:4]), int(d_t[4:6]), int(d_t[6:]))
+                got, fails = retry_missing(con, miss, (d_t_d - dt.timedelta(days=7)).isoformat(), now)
+                _, _, miss2, _ = missing_latest(con, symbols)
+                tail = ("" if (n_want - len(miss2)) / n_want >= RETRY_MIN_FRAC else
+                        " — 여전히 부족: 오늘 적재는 page_data 게이트가 막고, 다음 실행 7일 창·자동 보충이 채움")
+                print(f"2차 수집 완료: +{got:,}행 · 배치 실패 {fails} · 잔여 결측 {len(miss2):,}심볼{tail}")
+            elif d_t:
+                print(f"최신일 {d_t} 수집 {n_have:,}/{n_want:,}심볼 — 2차 수집 불필요")
+        except Exception as e:
+            print(f"  ⚠️ 2차 수집 실패(비치명): {e}")
 
         # 절벽 스캔(기존 오염 자가치유 — 오탐 무해, cliff_checked 로 반복 차단)
         try:

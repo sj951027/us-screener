@@ -14,6 +14,9 @@ mom12 + upratio63 + size(거래대금) 순위합의 당일 상위 종목을 텔�
 사용:
     python us_notify_test.py --dry-run   # 전송 없이 메시지 출력
     python us_notify_test.py             # 전송(키 없으면 콘솔 출력만, 비치명)
+
+[v09 2026-09-11] 잔행 날짜(휴장일에 야후가 흘린 1~2행 — 실측 20260907 CREG) 를 거래일에서 제외(게이트
+분모·계산 창 모두, us_page_data 와 동일 기준). 부분 수집 메시지는 '다음 실행 자동 보충' 안내로 변경.
 """
 import argparse
 import os
@@ -33,6 +36,22 @@ OHLCV_DB = DATA_DIR / "us_ohlcv.db"
 SEED_DB = DATA_DIR / "us_seed.db"
 TOP_N = 10
 LOOKBACK = 260   # mom12(252) + 여유
+COMPLETENESS_MIN = 0.9  # [v08] 완전성 게이트 기준(us_page_data 와 동일)
+STRAY_FRAC = 0.1        # [v09] 심볼 수가 최근 STRAY_WINDOW 거래일 최대의 이 비율 미만인 날짜 = 잔행 → 거래일 제외
+STRAY_WINDOW = 20
+
+
+def trading_dates(con):
+    """[v09] (거래일 목록, {날짜: close 있는 심볼 수}) — 잔행 날짜 제외. us_page_data.trading_dates 와 같은 기준."""
+    counts = dict(con.execute(
+        "SELECT date, COUNT(*) FROM daily_ohlcv WHERE close IS NOT NULL GROUP BY date ORDER BY date"))
+    dates, recent = [], []
+    for d, n in counts.items():
+        if recent and n < STRAY_FRAC * max(recent):
+            continue
+        dates.append(d)
+        recent = (recent + [n])[-STRAY_WINDOW:]
+    return dates, counts
 PAGE_URL = "https://sj951027.github.io/us-screener/us.html"  # 전체 표(GitHub Pages)
 TILT_URL = "https://sj951027.github.io/us-screener/us_tilt.html"  # 급등형 틸트(v 2026-07-18)
 
@@ -71,15 +90,14 @@ def db_health():
     parts.append(q("us_ohlcv.db", "SELECT COUNT(*) FROM daily_ohlcv", "시세"))
     try:  # [v08] 최신일 완전성 — 부분 수집(2026-09-02 실측 53%)을 사람이 보게
         c = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-        d2 = [d for (d,) in c.execute("SELECT DISTINCT date FROM daily_ohlcv ORDER BY date DESC LIMIT 2")]
-        if len(d2) == 2:
-            n_t = c.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=?", (d2[0],)).fetchone()[0]
-            n_p = c.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=?", (d2[1],)).fetchone()[0]
-            ratio = n_t / n_p if n_p else 1.0
-            parts.append(f"최신일 {d2[0]} {n_t:,}행({ratio:.0%})")
-            if ratio < 0.9:
-                warn.append(f"시세 최신일 부분 수집 {ratio:.0%}")
+        td, cnt = trading_dates(c)   # [v09] 잔행 날짜 제외
         c.close()
+        if len(td) >= 2:
+            n_t, n_p = cnt[td[-1]], cnt[td[-2]]
+            ratio = n_t / n_p if n_p else 1.0
+            parts.append(f"최신일 {td[-1]} {n_t:,}행({ratio:.0%})")
+            if ratio < COMPLETENESS_MIN:
+                warn.append(f"시세 최신일 부분 수집 {ratio:.0%}")
     except Exception:
         pass
     parts.append(q("us_ohlcv.db",
@@ -107,23 +125,23 @@ def db_health():
 def build_message():
     """(메시지, 최신일, partial). partial=True 면 순위 없이 경고만(v08 — 반토막 유니버스 순위 전송 방지)."""
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-    dates = [d for (d,) in con.execute(
-        "SELECT DISTINCT date FROM daily_ohlcv ORDER BY date")][-LOOKBACK:]
+    all_dates, counts = trading_dates(con)   # [v09] 잔행 날짜 제외(us_page_data 와 동일)
+    dates = all_dates[-LOOKBACK:]
     if len(dates) >= 2:  # [v08] 완전성 게이트 — us_page_data 와 같은 기준(전일의 90%)
-        n_t = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=? AND close IS NOT NULL", (dates[-1],)).fetchone()[0]
-        n_p = con.execute("SELECT COUNT(*) FROM daily_ohlcv WHERE date=? AND close IS NOT NULL", (dates[-2],)).fetchone()[0]
-        if n_p and n_t / n_p < 0.9:
+        n_t, n_p = counts[dates[-1]], counts[dates[-2]]
+        if n_p and n_t / n_p < COMPLETENESS_MIN:
             con.close()
             msg = "\n".join([
                 "⚠️ <b>[US] 시세 부분 수집 의심</b>",
-                f"최신일 {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {n_t/n_p:.0%} (기준 90%)",
-                "오늘 순위·점수 적재는 생략됨(반토막 유니버스 박제 방지). 로그의 '⚠️ 배치 실패' 확인.",
-                "다음날 시세가 채워지면 Actions → Run workflow → repair_dates 에 이 날짜 입력."])
+                f"최신일 {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {n_t/n_p:.0%} (기준 {COMPLETENESS_MIN:.0%})",
+                "오늘 순위·점수 적재는 생략됨(반토막 유니버스 박제 방지). 로그의 '2차 수집' 줄 확인.",
+                "다음 실행에서 시세가 채워지면 자동 보충(v09) — 사람 조치 불필요."])
             return msg, dates[-1], True
     raw = pd.read_sql(
         "SELECT symbol,date,close,adj_close,volume FROM daily_ohlcv WHERE date>=?",
         con, params=(dates[0],))
     con.close()
+    raw = raw[raw["date"].isin(set(dates))]   # [v09] 잔행 날짜 행 제외(창 밀림 방지)
     for c in ("close", "adj_close", "volume"):
         raw[c] = pd.to_numeric(raw[c], errors="coerce")
     C = raw.pivot_table(index="symbol", columns="date", values="adj_close",

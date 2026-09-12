@@ -44,12 +44,24 @@ us_ohlcv_collector.py — 미국 전체 상장 일봉 수집 (백필 + 일일 �
   ④ 평일 증분 0행이면 ⚠️ 명시(휴장일로 위장되던 조용한 실패).
   ⑤ 단일 심볼 청크의 MultiIndex(yfinance 1.x) 처리, 0값 행(close/adj_close≤0) 저장 안 함.
 
-[v09 2026-09-11 2차 수집 — patch_note/v09]
+[v09 2026-09-11 2차 수집 — patch_note/v09] ※ 아래 v10 에서 제거됨(효과 0행). 경위 기록으로만 남긴다.
   실측(09-11 러너 로그): '배치 실패 0'인데 최신일 20260910 행이 5,226/6,558 심볼에만 있었고, 정렬 순서 뒤쪽
   두 분위(S~Z)에서 86~89% 결측(TSLA·TSM·UNH·XOM 포함). 직후 다른 수집기에서 야후 429/401(크럼 거부).
   즉 예외 없이 '조용히' 당일 행이 빠지는 형태라 배치 실패 카운터로는 안 잡힌다. 다음날 7일 창이 전날을 채우므로
   DB 는 결국 완결되지만 그날의 점수 적재가 비게 된다(us_page_data v08 게이트). 원인(스로틀 vs 캐시)은 미확정 →
   둘 다에 걸리도록: 증분 뒤 최신일 결측 심볼만 RETRY_WAIT_S 쉬고 start= 명시(range=7d 와 다른 URL)로 작은 배치 재요청.
+
+[v10 2026-09-12 계측 — patch_note/v10] v09 2차 수집은 **무효로 판명돼 제거**한다.
+  실측(러너 #55, 2026-09-12 00:00 UTC): 최신일 20260911 수집 1,055/6,551(16%) → 90s 뒤 결측 5,504심볼을
+  20개씩 276배치로 재요청 → **+0행**(배치 예외 0). 같은 실행=같은 출구 IP 라 곧바로 다시 물어봐야 소용이 없다.
+  같은 날 노트북에서 러너와 동일 버전(yfinance 1.7.0 + pandas 3.0.5)으로 같은 코드 경로를 태우면 30종목 중 29개가
+  20260911 행을 정상 반환 → 데이터는 야후에 있고, 라이브러리 버전 문제도 아니다.
+  결측 분포도 특이하다: 알파벳 10분위 전부 11~21% 로 균일(= 배치 순서·누적 요청량 탓이 아님)인데
+  하이픈 심볼(우선주·클래스주) 93% vs 일반 심볼 11%. 러너 지역도 다르다(#53·#54 westcentralus 정상 → #55 eastus2 16%).
+  **원인 미특정.** 지금까지 못 좁힌 이유는 수집기가 심볼별 실패를 `except Exception: pass` 로 통째로 삼켜
+  러너에서 무슨 응답이 왔는지 기록이 남지 않아서다. → 추측 기반 수정 대신 계측을 넣는다:
+  ① 러너 지문(공인 IP·라이브러리 버전)을 로그 첫 줄에 ② yfinance 로거(WARNING+)를 잡아 사유별 집계
+  (HTTP 본문 포함) ③ 심볼별 결측을 빈 프레임/키 없음/예외로 분류. 다음 실행 로그 1회로 원인을 좁힌다.
 """
 import argparse
 import datetime as dt
@@ -71,12 +83,12 @@ CHUNK = 50            # yf.download 배치 크기 (보수적 — rate limit 대�
 SLEEP_BETWEEN = 1.0   # 배치 간 대기(초)
 REPAIR_CAP = 200      # 회당 재조정(전체 재수집) 심볼 상한 — 남은 건 다음 실행이 처리
 GIVE_UP_ATTEMPTS = 6  # v08: 재조정 시도 상한(배치 예외도 세므로 3→6)
-# v09 2차 수집(헤더 참조) — 증분 직후 최신일 결측 심볼만 재요청
-RETRY_MIN_FRAC = 0.9  # 최신일 수집 심볼 / 대상 — 이 미만이면 2차 수집(us_page_data 완전성 게이트와 같은 기준)
-RETRY_WAIT_S = 90     # 2차 수집 전 대기(초) — 스로틀 해제 여유
-RETRY_CHUNK = 20      # 2차 배치 크기(1차 50 보다 작게)
-RETRY_SLEEP = 3.0     # 2차 배치 간 대기(초)
+LOW_YIELD_FRAC = 0.9  # v10: 최신일 수집 심볼 / 대상 — 이 미만이면 ⚠️ + 사유 집계 상세 출력(page_data 게이트와 같은 기준)
 STRAY_FRAC = 0.1      # 심볼 수가 최근 최대의 이 비율 미만인 날짜 = 잔행(휴장일에 흘린 1~2행) → 거래일로 안 침
+# v10 계측 출력 크기 — 로그가 길어지지 않게 상한을 둔다
+MSG_TOP = 8           # 사유별 집계에서 보여줄 상위 메시지 수
+MSG_KEEP = 180        # 메시지 1건 보관 길이(문자)
+SAMPLE_SYMS = 5       # 예시로 찍을 심볼 수
 REASON_PRI = {"split": 0, "cliff": 1, "div": 2}   # v08 처리 순서(분할 > 절벽 > 배당)
 # 절벽 스캔이 보는 정수 분할비 후보(정방향=액면병합, 역방향=액면분할). ±6% 허용.
 SPLIT_RATIOS = [2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 40, 50]
@@ -145,6 +157,87 @@ def store(con, df, symbol, replace=False):
     cur = con.executemany(
         f"INSERT OR {verb} INTO daily_ohlcv VALUES (?,?,?,?,?,?,?,?)", rows)
     return cur.rowcount
+
+
+def runtime_banner():
+    """v10: 실행 환경 지문 한 줄. 러너마다 다른 출구 IP·지역을 기록해 '어떤 러너에서 수집이 망하는가'를
+    사후에 맞춰볼 수 있게 한다(워크플로가 RUNNER_IP 를 넣어준다). 버전은 requirements 고정 후에도
+    실제 설치본을 확인하려고 찍는다."""
+    vers = []
+    for mod in ("yfinance", "pandas", "curl_cffi"):
+        try:
+            vers.append(f"{mod} {__import__(mod).__version__}")
+        except Exception:
+            vers.append(f"{mod} ?")
+    ip = os.environ.get("RUNNER_IP", "").strip() or "?"
+    print(f"[환경] 출구IP {ip} · " + " · ".join(vers))
+
+
+def _norm_msg(m):
+    """v10: yfinance 경고/오류 메시지에서 심볼 부분을 지워 사유별로 묶는다."""
+    import re
+    m = " ".join(str(m).split())
+    m = re.sub(r"\$[A-Za-z0-9.\-]{1,12}:", "$SYM:", m)            # '$AAPL: ...' → '$SYM: ...'
+    m = re.sub(r"\[[^\]]*\]:", "[SYMS]:", m)                       # "['A', 'B']: ..." → '[SYMS]: ...'
+    m = re.sub(r"symbol: ?[A-Za-z0-9.\-]{1,12}", "symbol: SYM", m)
+    m = re.sub(r"\b\d{1,3}(\.\d+)? Failed downloads?", "N Failed downloads", m)
+    return m[:MSG_KEEP]
+
+
+class YFLogCapture:
+    """v10: yfinance 로거의 WARNING 이상을 모아 사유별로 센다. 실측(로컬)에서 '$SYM: No data found',
+    'HTTP Error 404: {...}' 같은 본문까지 잡히는 것을 확인했다. 개별 심볼 예외를 조용히 삼키던 구멍의 대체물."""
+
+    def __init__(self):
+        import collections
+        self.counts = collections.Counter()
+        self.samples = {}
+        self._h = None
+
+    def __enter__(self):
+        import logging
+        cap = self
+
+        class _H(logging.Handler):
+            def emit(self, r):
+                try:
+                    cap.add(r.getMessage())
+                except Exception:
+                    pass
+
+        self._h = _H()
+        self._h.setLevel(logging.WARNING)
+        lg = logging.getLogger("yfinance")
+        self._prev_level = lg.level
+        lg.addHandler(self._h)
+        if lg.level == logging.NOTSET or lg.level > logging.WARNING:
+            lg.setLevel(logging.WARNING)
+        return self
+
+    def __exit__(self, *a):
+        import logging
+        lg = logging.getLogger("yfinance")
+        if self._h is not None:
+            lg.removeHandler(self._h)
+        lg.setLevel(self._prev_level)
+        return False
+
+    def add(self, msg):
+        import re
+        key = _norm_msg(msg)
+        self.counts[key] += 1
+        if key not in self.samples:
+            m = re.search(r"\$([A-Za-z0-9.\-]{1,12}):", str(msg))
+            self.samples[key] = m.group(1) if m else ""
+
+    def report(self, label="수집"):
+        if not self.counts:
+            return f"[{label} 사유] yfinance 경고 없음"
+        lines = [f"[{label} 사유] 경고/오류 {sum(self.counts.values())}건 · 종류 {len(self.counts)}"]
+        for msg, n in self.counts.most_common(MSG_TOP):
+            eg = self.samples.get(msg, "")
+            lines.append(f"    {n:6d}회 | {msg}" + (f"  (예: {eg})" if eg else ""))
+        return "\n".join(lines)
 
 
 def fetch_chunk(symbols, start=None, period=None, actions=False):
@@ -257,32 +350,6 @@ def missing_latest(con, symbols):
     prev = {s for (s,) in con.execute("SELECT symbol FROM daily_ohlcv WHERE date=?", (d_p,))}
     want = set(symbols) & prev
     return d_t, d_p, sorted(want - have), len(want)
-
-
-def retry_missing(con, miss, start, now):
-    """v09 2차 수집: 결측 심볼만 RETRY_CHUNK 씩 start= 명시로 재요청(저장 IGNORE·이벤트 등록 동일). (저장 행수, 배치 실패 수)."""
-    got, fails = 0, 0
-    for i in range(0, len(miss), RETRY_CHUNK):
-        chunk = miss[i:i + RETRY_CHUNK]
-        try:
-            df = fetch_chunk(chunk, start=start, actions=True)
-        except Exception as e:
-            fails += 1
-            print(f"  ⚠️ 2차 배치 {i // RETRY_CHUNK} 실패 건너뜀: {e}")
-            time.sleep(10)
-            continue
-        for s in chunk:
-            try:
-                sub = sub_frame(df, s, len(chunk))
-                got += store(con, sub, s)
-                ev = detect_events(sub)
-                if ev:
-                    register_event(con, s, ev[0], ev[1], now)
-            except Exception:
-                pass
-        con.commit()
-        time.sleep(RETRY_SLEEP)
-    return got, fails
 
 
 def _queue_fail(con, sym, reason, detail, max_attempts=GIVE_UP_ATTEMPTS):
@@ -471,26 +538,30 @@ def self_test():
                            + [("S00", "20260910", 0, 0, 0, 1, 1, 1)])
     check("missing: 최신 행 날짜가 잔행(휴장일 실행)이면 직전 거래일 기준·결측 없음",
           missing_latest(only_stray, syms9)[:3] == ("20260909", "20260908", []))
-    g = globals()
-    real_fetch, real_sleep = g["fetch_chunk"], time.sleep
-    calls = []
-
-    def fake_fetch(symbols, start=None, period=None, actions=False):
-        calls.append((list(symbols), start))
-        i9 = pd.to_datetime(["2026-09-10"])
-        one = pd.DataFrame(dict(Open=[1.0], High=[1.0], Low=[1.0], Close=[11.0], Volume=[5],
-                                **{"Adj Close": [11.0], "Dividends": [0.0], "Stock Splits": [0.0]}), index=i9)
-        return pd.concat({s_: one for s_ in symbols}, axis=1)
-    g["fetch_chunk"], time.sleep = fake_fetch, lambda *_: None
-    try:
-        got, fails = retry_missing(con9, miss, "2026-09-03", "t")
-    finally:
-        g["fetch_chunk"], time.sleep = real_fetch, real_sleep
-    check("retry: 결측 4심볼 → 4행 저장·실패 0", (got, fails) == (4, 0))
-    check("retry: start= 명시로 요청", bool(calls) and all(c[1] == "2026-09-03" for c in calls))
-    check("retry: 보충 뒤 결측 0", missing_latest(con9, syms9)[2] == [])
-    check("retry: 기존 행 보존(IGNORE)", con9.execute(
-        "SELECT close FROM daily_ohlcv WHERE symbol='S00' AND date='20260910'").fetchone()[0] == 11.0)
+    # v10 계측: 메시지 정규화 + 로거 캡처
+    check("norm: 심볼 접두어를 묶는다",
+          _norm_msg("$AAPL: No data found, symbol may be delisted")
+          == _norm_msg("$TSLA: No data found, symbol may be delisted"))
+    check("norm: 심볼 목록을 묶는다",
+          _norm_msg("['A', 'B']: No data found") == _norm_msg("['C']: No data found"))
+    check("norm: 서로 다른 사유는 안 묶는다",
+          _norm_msg("$A: No data found") != _norm_msg("$A: HTTP Error 404"))
+    check("norm: 길이 상한", len(_norm_msg("x" * 500)) == MSG_KEEP)
+    import logging as _lg
+    cap9 = YFLogCapture()
+    with cap9:
+        _lg.getLogger("yfinance").error("$AAPL: No data found, symbol may be delisted")
+        _lg.getLogger("yfinance").error("$TSLA: No data found, symbol may be delisted")
+        _lg.getLogger("yfinance").error('HTTP Error 404: {"code":"Not Found"}')
+        _lg.getLogger("yfinance").info("무시되는 INFO")
+    check("capture: WARNING+ 만 · 사유별 집계", sum(cap9.counts.values()) == 3 and len(cap9.counts) == 2)
+    check("capture: 같은 사유 2건 묶임", max(cap9.counts.values()) == 2)
+    check("capture: 예시 심볼 기록", cap9.samples.get(_norm_msg("$AAPL: No data found, symbol may be delisted")) == "AAPL")
+    check("capture: 보고 문자열", "종류 2" in cap9.report())
+    check("capture: 빠져나온 뒤 핸들러 제거",
+          not any(type(h).__name__ == "_H" for h in _lg.getLogger("yfinance").handlers))
+    cap0 = YFLogCapture()
+    check("capture: 경고 0건이면 그 사실을 찍는다", "경고 없음" in cap0.report())
     print("✅ self-test 통과" if ok else "❌ self-test 실패")
     sys.exit(0 if ok else 1)
 
@@ -513,6 +584,7 @@ def main():
         return
     import pandas as pd  # noqa: F401
 
+    runtime_banner()   # v10: 출구 IP·라이브러리 버전을 로그 맨 앞에(러너별 수집 실패 대조용)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(OHLCV_DB)
     for d in DDL:
@@ -561,6 +633,7 @@ def main():
         # 일일 증분: 최근 7일 창(휴장·누락 자동 보완, 중복 IGNORE)
         #   + actions=True 로 창 안의 분할/배당 이벤트 감지(v2026-08-21 — 헤더 참조)
         total, n_evt, n_batch_fail = 0, 0, 0
+        n_empty, n_nokey, n_exc = 0, 0, 0   # v10: 심볼별 결측 분류(빈 프레임 / 응답에 심볼 없음 / 그 외 예외)
         now = dt.datetime.now().isoformat(timespec="seconds")
         # v08 ③: 창 시작 = 마지막 저장일 − 7d (마지막 저장일이 7일 넘게 오래됐으면 그만큼 넓어짐 —
         #   Actions 장기 중단·연속 실패 뒤에도 자동 치유). 평소엔 기존 7일 창과 동일.
@@ -571,51 +644,64 @@ def main():
             if (dt.date.today() - last_d).days > 7:
                 fetch_kw = {"start": (last_d - dt.timedelta(days=7)).isoformat()}
                 print(f"  ↺ 마지막 저장일 {last} 이 7일 넘게 오래됨 — 창을 {fetch_kw['start']} 부터로 넓힘")
-        for i in range(0, len(symbols), CHUNK):
-            chunk = symbols[i:i + CHUNK]
-            try:
-                df = fetch_chunk(chunk, actions=True, **fetch_kw)
-            except Exception as e:
-                print(f"  ⚠️ 배치 {i//CHUNK} 실패 건너뜀: {e}")
-                n_batch_fail += 1
-                time.sleep(10)
-                continue
-            for s in chunk:
+        cap = YFLogCapture()
+        with cap:   # v10: yfinance 경고/오류를 사유별로 집계(개별 심볼 예외를 삼키던 구멍의 대체)
+            for i in range(0, len(symbols), CHUNK):
+                chunk = symbols[i:i + CHUNK]
                 try:
-                    sub = sub_frame(df, s, len(chunk))
-                    total += store(con, sub, s)
-                    ev = detect_events(sub)
-                    if ev and register_event(con, s, ev[0], ev[1], now):
-                        n_evt += 1
-                except Exception:
-                    pass
-            con.commit()
-            time.sleep(SLEEP_BETWEEN)
+                    df = fetch_chunk(chunk, actions=True, **fetch_kw)
+                except Exception as e:
+                    print(f"  ⚠️ 배치 {i//CHUNK} 실패 건너뜀: {e}")
+                    n_batch_fail += 1
+                    time.sleep(10)
+                    continue
+                for s in chunk:
+                    try:
+                        sub = sub_frame(df, s, len(chunk))
+                        if sub is None or sub.empty:   # v10: 응답은 왔는데 이 심볼 행이 0
+                            n_empty += 1
+                            continue
+                        total += store(con, sub, s)
+                        ev = detect_events(sub)
+                        if ev and register_event(con, s, ev[0], ev[1], now):
+                            n_evt += 1
+                    except KeyError:                   # v10: 응답 컬럼에 심볼 자체가 없음
+                        n_nokey += 1
+                    except Exception:
+                        n_exc += 1
+                con.commit()
+                time.sleep(SLEEP_BETWEEN)
         print(f"증분 완료: 신규 {total}행 · 이벤트 신규등록 {n_evt}심볼 · 배치 실패 {n_batch_fail}")
+        print(f"[증분 결측] 빈 프레임 {n_empty} · 응답에 심볼 없음 {n_nokey} · 예외 {n_exc} "
+              f"(대상 {len(symbols)})")
+        print(cap.report("증분"))
         if total == 0 and dt.date.today().weekday() < 5:
             print("⚠️ 평일인데 증분 0행 — 휴장일이 아니면 수집 실패(rate limit/네트워크). "
                   "텔레그램 '시세 없음' 알림·건강줄 확인. 다음 실행이 창을 넓혀 자동 보충함")
         if n_batch_fail:
             print(f"⚠️ 배치 실패 {n_batch_fail}건 — 오늘 유니버스 일부 결측 가능(page_data 완전성 게이트가 걸러줌)")
 
-        # v09 2차 수집 — 최신일 결측 심볼만(원인 미확정: 스로틀/캐시 둘 다 대응 — 잠시 쉬고 start= 명시 URL 로 재요청)
+        # v10 수확량 점검 — 낮으면 결측 심볼의 모양(하이픈 포함 비율·알파벳 분포)까지 찍어
+        #   다음 실행 로그 1회로 원인을 좁힌다. 재요청은 하지 않는다(v09 2차 수집 +0행 실측 → 제거).
         try:
             d_t, d_p, miss, n_want = missing_latest(con, symbols)
             n_have = n_want - len(miss)
-            if d_t and n_want and n_have / n_want < RETRY_MIN_FRAC:
-                print(f"⚠️ 최신일 {d_t} 수집 {n_have:,}/{n_want:,}심볼({n_have / n_want:.0%} < {RETRY_MIN_FRAC:.0%}) "
-                      f"— 결측 {len(miss):,}심볼 {RETRY_WAIT_S}s 뒤 2차 수집")
-                time.sleep(RETRY_WAIT_S)
-                d_t_d = dt.date(int(d_t[:4]), int(d_t[4:6]), int(d_t[6:]))
-                got, fails = retry_missing(con, miss, (d_t_d - dt.timedelta(days=7)).isoformat(), now)
-                _, _, miss2, _ = missing_latest(con, symbols)
-                tail = ("" if (n_want - len(miss2)) / n_want >= RETRY_MIN_FRAC else
-                        " — 여전히 부족: 오늘 적재는 page_data 게이트가 막고, 다음 실행 7일 창·자동 보충이 채움")
-                print(f"2차 수집 완료: +{got:,}행 · 배치 실패 {fails} · 잔여 결측 {len(miss2):,}심볼{tail}")
+            if d_t and n_want and n_have / n_want < LOW_YIELD_FRAC:
+                print(f"⚠️ 최신일 {d_t} 수집 {n_have:,}/{n_want:,}심볼({n_have / n_want:.0%} < {LOW_YIELD_FRAC:.0%}) "
+                      f"— 결측 {len(miss):,}. 오늘 적재는 page_data 게이트가 막고, 다음 실행 7일 창·자동 보충이 채운다.")
+                dash = [s for s in miss if "-" in s]
+                want_dash = [s for s in symbols if "-" in s]
+                if want_dash:
+                    print(f"    결측 중 하이픈 심볼 {len(dash):,}/{len(want_dash):,}"
+                          f"({len(dash)/len(want_dash):.0%}) · 일반 심볼 "
+                          f"{len(miss)-len(dash):,}/{len(symbols)-len(want_dash):,}"
+                          f"({(len(miss)-len(dash))/max(1, len(symbols)-len(want_dash)):.0%})")
+                q = sorted(miss)
+                print(f"    결측 예시: {', '.join(q[:SAMPLE_SYMS])} … {', '.join(q[-SAMPLE_SYMS:])}")
             elif d_t:
-                print(f"최신일 {d_t} 수집 {n_have:,}/{n_want:,}심볼 — 2차 수집 불필요")
+                print(f"최신일 {d_t} 수집 {n_have:,}/{n_want:,}심볼 — 정상")
         except Exception as e:
-            print(f"  ⚠️ 2차 수집 실패(비치명): {e}")
+            print(f"  ⚠️ 수확량 점검 실패(비치명): {e}")
 
         # 절벽 스캔(기존 오염 자가치유 — 오탐 무해, cliff_checked 로 반복 차단)
         try:

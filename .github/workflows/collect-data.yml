@@ -68,6 +68,18 @@ jobs:
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 
+      # v10 2026-09-12: 러너 출구 IP 기록 — 수집 수확량이 러너마다 크게 다른데(실측 #53·#54 westcentralus 정상,
+      #   #55 eastus2 16%) 로그에 IP 가 없어 대조가 불가능했다. GitHub 호스티드 러너(Azure)의 일회용 주소라
+      #   공개 로그에 남아도 개인정보가 아니다. 실패해도 비치명(continue-on-error).
+      - name: Runner fingerprint (수집 실패 대조용)
+        continue-on-error: true
+        run: |
+          ip=$(curl -s --max-time 10 https://api.ipify.org || true)
+          [ -n "$ip" ] || ip=$(curl -s --max-time 10 https://checkip.amazonaws.com || true)
+          ip=$(echo "$ip" | tr -d '[:space:]')
+          echo "RUNNER_IP=${ip:-unknown}" >> "$GITHUB_ENV"   # 이후 스텝에 자동 전달 → us_ohlcv_collector 가 찍는다
+          echo "출구 IP: ${ip:-unknown}"
+
       - name: Run collectors
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data

@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,SNDK,Sandisk Corporation - Common Stock When-,Technology,50,0.0863,1.0,9.0,33.2,1692.59,20260814,50,20260910
-2,COHR,Coherent Corp. Common Stock,Technology,10,0.0641,1.14,9.1,-10.8,293.17,20260814,50,20260910
-3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,1,0.0616,1.3,7.5,14.0,935.7,20260814,50,20260910
-4,ASX,ASE Technology Holding Co.  Ltd. America,Technology,9,0.0458,1.2,7.5,3.1,39.86,20260814,50,20260910
-5,STX,Seagate Technology Holdings PLC - Ordina,Technology,3,0.0532,1.72,6.7,5.1,862.33,20260814,50,20260910
-6,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,28,0.0462,1.65,5.8,-9.2,272.43,20260814,50,20260910
-7,HL,Hecla Mining Company Common Stock,Basic Materials,39,0.0419,1.0,-3.6,12.7,20.02,20260814,50,20260910
-8,AMD,Advanced Micro Devices  Inc. - Common St,Technology,20,0.0456,1.49,10.2,6.2,503.6,20260814,50,20260910
-9,DELL,Dell Technologies Inc. Class C Common St,Technology,8,0.0489,2.38,2.9,14.9,506.62,20260814,50,20260910
-10,PATH,UiPath  Inc. Class A Common Stock,Technology,33,0.0431,1.74,-22.9,-11.8,13.87,20260814,50,20260910
+1,COHR,Coherent Corp. Common Stock,Technology,9,0.0642,1.14,15.5,-14.1,305.37,20260814,50,20260911
+2,LITE,Lumentum Holdings Inc. - Common Stock,Technology,2,0.0614,1.3,9.4,-0.6,927.03,20260814,50,20260911
+3,STX,Seagate Technology Holdings PLC - Ordina,Technology,6,0.0528,1.72,4.0,-5.5,830.17,20260814,50,20260911
+4,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.0449,1.2,5.5,0.5,39.47,20260814,50,20260911
+5,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,26,0.0456,1.65,5.8,-11.5,274.9,20260814,50,20260911
+6,AMD,Advanced Micro Devices  Inc. - Common St,Technology,18,0.0446,1.49,13.1,6.9,516.13,20260814,50,20260911
+7,DELL,Dell Technologies Inc. Class C Common St,Technology,7,0.0505,2.38,9.9,17.1,567.29,20260814,50,20260911
+8,PATH,UiPath  Inc. Class A Common Stock,Technology,36,0.0431,1.74,-24.5,-9.9,13.75,20260814,50,20260911
+9,UMC,United Microelectronics Corporation (NEW,Technology,37,0.05,2.58,14.0,17.2,22.64,20260814,50,20260911
+10,VRT,Vertiv Holdings  LLC Class A Common Stoc,Industrials,40,0.0479,2.77,-4.4,-10.9,257.06,20260814,50,20260911

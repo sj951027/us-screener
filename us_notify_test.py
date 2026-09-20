@@ -273,12 +273,14 @@ def main():
     # 보고 전송 생략. 수동 실행(workflow_dispatch)은 TELEGRAM_FORCE=1 로 항상 전송.
     import datetime as _dt
     from zoneinfo import ZoneInfo
-    today_et = _dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y%m%d")
+    # v11: 실행이 03:17 UTC(ET 밤~새벽)로 옮겨져 ET 06시 이전이면 전날 세션으로 본다
+    now_session = _dt.datetime.now(ZoneInfo("America/New_York")) - _dt.timedelta(hours=6)
+    today_et = now_session.strftime("%Y%m%d")
     if os.environ.get("TELEGRAM_FORCE", "").strip() != "1" and latest != today_et:
         print(f"⏭ 휴장일 추정(최신 {latest} ≠ 오늘 ET {today_et}) — 순위 전송 생략.")
         # [v08] 평일인데 오늘 시세가 없으면 한 줄만 보낸다 — 휴장일이면 정상, 아니면 수집 실패
         #   (리뷰 H4: 0행 수집일이 휴장일로 위장돼 아무도 몰랐던 구멍). 연 ~10회 휴장일 잡음은 감수.
-        if _dt.datetime.now(ZoneInfo("America/New_York")).weekday() < 5:
+        if now_session.weekday() < 5:
             send(f"⏭ [US] 오늘(ET {today_et}) 시세 없음 — 최신 {latest}. 휴장일이면 정상, 아니면 수집 실패(로그 '증분 완료' 행수 확인)")
         return
     send(msg)

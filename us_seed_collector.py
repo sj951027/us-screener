@@ -55,13 +55,17 @@ DDL = [
 ]
 
 
+SESSION_ROLLOVER_H = 6   # v11: ET 06시 전 실행은 전날 세션(03:17 UTC cron 지연 대응)
+
+
 def et_today():
-    """미국 동부 기준 오늘(YYYYMMDD). zoneinfo 실패 시 UTC-5 근사."""
+    """미국 동부 기준 세션 날짜(YYYYMMDD). ET 06시 이전이면 전날(v11). zoneinfo 실패 시 UTC-5 근사."""
+    back = dt.timedelta(hours=SESSION_ROLLOVER_H)
     try:
         from zoneinfo import ZoneInfo
-        return dt.datetime.now(ZoneInfo("America/New_York")).strftime("%Y%m%d")
+        return (dt.datetime.now(ZoneInfo("America/New_York")) - back).strftime("%Y%m%d")
     except Exception:
-        return (dt.datetime.utcnow() - dt.timedelta(hours=5)).strftime("%Y%m%d")
+        return (dt.datetime.utcnow() - dt.timedelta(hours=5) - back).strftime("%Y%m%d")
 
 
 def parse_symdir(text, is_nasdaq):

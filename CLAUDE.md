@@ -42,7 +42,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
 
 ## 운영 사실
 
-- 실행은 GitHub Actions(cron 22:00 UTC 월~금), 노트북 불필요. 최신 DB 정본은
+- 실행은 GitHub Actions(cron 03:17 UTC 화~토 = 전날 ET 세션, v11), 노트북 불필요. 최신 DB 정본은
   Release 자산(us-data.tar.gz):
   `https://github.com/sj951027/us-screener/releases/download/data-store/us-data.tar.gz`.
   로컬 폴더의 `_t_us-data.tar.gz` 등 사본은 구본일 수 있다.
@@ -91,6 +91,10 @@ research/ 산출물, docs/data 자동 커밋, 문서만의 변경은 제외.
   sector_cache는 현재 분류(PIT 아님). PREREGISTER 후보 `us_mus_v1_ind` 제안 상태.
 - 관측 성적(07-13~08-28) us_mus_v0 EW 대비 −3.09%p. vol_cv 안정재 효과 재현 미약.
 - 사용자 방향: "섞기(분산)"는 안 함, 새 재료 우선. 순발행 무신호 종결. 13F 후순위, 옵션 1년 후.
+- 큰 승자 스캔(09-16, research/RESEARCH_us_bigwin_scan_20260916.md): 급등 확률을 키우는 특징(고변동·저가·
+  상장 1년 미만·52주고점 이탈·저수익성)은 전부 복권형(급락도 같이 커짐, 평균 초과 ≤0) — 이 계열 재스캔 금지.
+  매출성장(rev_g)만 top50 증분 전 변형 양(+)이나 대조군 대비 95% 경계·2026 소멸 → 관측 컬럼 후보, 채택 아님.
+  레짐 타이밍(200MA·시장폭·VIX)은 이 창에서 전부 해로움(약세장 표본 0). 일별 공매도 svr 2026 재실행 무신호 종결.
 
 ## 9월 본구축 작업 세트 (진행 상태는 사용자에게 확인)
 

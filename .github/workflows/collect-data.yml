@@ -1,12 +1,15 @@
 # 미국판 데이터 수집 — GitHub Actions 자동 실행 (노트북 불필요)
-# 매일 22:00 UTC = 한국 아침 07:00 (미국 마감 후 1~2시간) · 미국 거래일(월~금 ET)만
+# 매일 03:17 UTC(화~토) = 한국 낮 12:17 · 전날 미국 거래일(월~금 ET) 마감분 수집
+# v11 2026-09-17: 22:00 UTC → 03:17 UTC. GitHub 스케줄 지연(9월 ~2시간)으로 실행이 00:00 UTC(=20:00 ET) 전후로
+#   밀리면서 야후 일봉 당일분이 16%만 오는 결함이 9회 연속(실측: 루프가 20:00 ET 전에 끝나면 정상, 넘기면 16~80%).
+#   날짜 판정은 'ET 06시 이전이면 전날 세션'으로 바꿔(v11) 지연돼 ET 자정을 넘겨도 같은 거래일로 본다.
 # 데이터 보관: git 커밋이 아니라 Release 자산(us-data.tar.gz) — repo 비대화 방지.
 # 수동 실행: Actions 탭 → collect-us-data → Run workflow
 name: collect-us-data
 
 on:
   schedule:
-    - cron: '0 22 * * 1-5'
+    - cron: '17 3 * * 2-6'   # v11: 정시 혼잡 회피(17분) · 화~토 UTC = 월~금 ET 세션
   workflow_dispatch:
     inputs:
       repair_dates:
@@ -64,7 +67,8 @@ jobs:
           else
             echo "자산 없음(릴리스만 존재) — 새로 시작"
           fi
-          echo "RUN_DOW=$(date -u +%u)" >> "$GITHUB_ENV"   # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4)
+          # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4). v11: 'ET 세션 요일'(ET 06시 이전이면 전날) — 화~토 UTC 실행과 맞춤
+          echo "RUN_DOW=$(TZ=America/New_York date -d '-6 hours' +%u)" >> "$GITHUB_ENV"
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 
@@ -170,8 +174,8 @@ jobs:
           gh release view data-store >/dev/null 2>&1 || gh release create data-store --title "US data store" --notes "수집 데이터 자동 보관용 (매일 갱신)"
           gh release upload data-store us-data.tar.gz --clobber
           echo "업로드 완료: $(du -h us-data.tar.gz | cut -f1)"
-          # 금요일(잡 시작 시점 UTC 요일)엔 주간 백업본 — v08: '직전 일일본'을 보관해 오늘 run 오염과 분리
-          if [ "${RUN_DOW:-$(date -u +%u)}" = "5" ]; then
+          # 금요일 세션(잡 시작 시점 ET 세션 요일, v11)엔 주간 백업본 — v08: '직전 일일본'을 보관해 오늘 run 오염과 분리
+          if [ "${RUN_DOW:-$(TZ=America/New_York date -d '-6 hours' +%u)}" = "5" ]; then
             if [ -f us-data-prev.tar.gz ]; then cp us-data-prev.tar.gz us-data-weekly.tar.gz; else cp us-data.tar.gz us-data-weekly.tar.gz; fi
             gh release upload data-store us-data-weekly.tar.gz --clobber
             echo "주간 백업본 갱신(금요일, 직전 일일본)"

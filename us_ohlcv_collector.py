@@ -675,7 +675,8 @@ def main():
         print(f"[증분 결측] 빈 프레임 {n_empty} · 응답에 심볼 없음 {n_nokey} · 예외 {n_exc} "
               f"(대상 {len(symbols)})")
         print(cap.report("증분"))
-        if total == 0 and dt.date.today().weekday() < 5:
+        # v11: 러너는 UTC 화~토 새벽 실행 — 요일은 ET 세션 기준(UTC-5 근사 후 06시 롤오버)
+        if total == 0 and (dt.datetime.utcnow() - dt.timedelta(hours=11)).weekday() < 5:
             print("⚠️ 평일인데 증분 0행 — 휴장일이 아니면 수집 실패(rate limit/네트워크). "
                   "텔레그램 '시세 없음' 알림·건강줄 확인. 다음 실행이 창을 넓혀 자동 보충함")
         if n_batch_fail:

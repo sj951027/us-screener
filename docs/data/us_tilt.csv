@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,43,0.2304,1.0,17.9,29.7,172.94,20260831,50,20260921
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0551,1.35,17.6,2.5,257.38,20260831,50,20260921
-3,COHR,Coherent Corp. Common Stock,Technology,5,0.0646,1.72,20.6,10.9,321.52,20260831,50,20260921
-4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,1,0.0626,1.72,14.3,8.6,954.49,20260831,50,20260921
-5,MXL,MaxLinear  Inc - Common Stock,Technology,46,0.0835,2.16,32.7,31.7,85.98,20260831,50,20260921
-6,NOK,Nokia Corporation Sponsored American Dep,Technology,36,0.0423,1.0,13.4,7.8,10.94,20260831,50,20260921
-7,PATH,UiPath  Inc. Class A Common Stock,Technology,33,0.0441,1.56,-7.3,-14.6,13.59,20260831,50,20260921
-8,ASX,ASE Technology Holding Co.  Ltd. America,Technology,15,0.0441,1.58,17.9,19.8,43.73,20260831,50,20260921
-9,STX,Seagate Technology Holdings PLC - Ordina,Technology,49,0.0517,2.36,8.9,3.2,877.33,20260831,50,20260921
-10,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,17,0.0484,2.4,16.5,4.9,279.11,20260831,50,20260921
+1,COHR,Coherent Corp. Common Stock,Technology,11,0.0634,1.72,3.7,9.1,300.6,20260831,50,20260923
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,5,0.0539,1.35,13.6,13.8,260.9,20260831,50,20260923
+3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0618,1.72,1.9,12.9,937.0,20260831,50,20260923
+4,SMTC,Semtech Corporation - Common Stock,Technology,23,0.0629,1.86,1.1,40.0,169.33,20260831,50,20260923
+5,MXL,MaxLinear  Inc - Common Stock,Technology,26,0.084,2.16,21.3,34.3,84.32,20260831,50,20260923
+6,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.043,1.58,15.8,21.2,43.93,20260831,50,20260923
+7,STX,Seagate Technology Holdings PLC - Ordina,Technology,14,0.0519,2.36,18.0,16.3,923.86,20260831,50,20260923
+8,NVT,nVent Electric plc Ordinary Shares,Industrials,32,0.0343,1.18,10.3,6.2,162.85,20260831,50,20260923
+9,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,17,0.0487,2.4,9.6,7.2,275.84,20260831,50,20260923
+10,ASML,ASML Holding N.V. - New York Registry Sh,Technology,44,0.0302,1.36,8.9,0.3,1744.61,20260831,50,20260923

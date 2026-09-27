@@ -31,7 +31,7 @@ jobs:
         run: |
           set -e
           for m in us_ohlcv_collector us_options_collector us_shortvol_collector us_xbrl_collector \
-                   us_earnings_collector us_insider_collector us_integrity; do
+                   us_earnings_collector us_insider_collector us_integrity us_analyst_collector; do
             echo "::group::$m"; python "$m.py" --self-test; echo "::endgroup::"
           done
       - name: Unit tests (research/test_*.py)

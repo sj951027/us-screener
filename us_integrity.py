@@ -35,8 +35,9 @@ TABLES = {
     "us_options.db": ["option_daily"],
     "us_shortvol.db": ["short_volume_daily"],
     "us_fundamentals.db": ["xbrl_facts", "earnings_events"],
+    "us_analyst.db": ["eps_snapshot", "rating_changes"],   # v20
 }
-REPAIR_EXEMPT = {"us_ohlcv.db:score_daily"}
+SCORE_KEY = "us_ohlcv.db:score_daily"   # v21: 이 테이블은 (모델, 날짜)별로도 센다 — 수동 재계산은 지정 날짜만 예외
 
 
 def counts(data_dir):
@@ -52,6 +53,9 @@ def counts(data_dir):
                 out[f"{db}:{t}"] = con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
             except sqlite3.OperationalError:
                 pass
+        if f"{db}:score_daily" in out:
+            for m, d, n in con.execute("SELECT model, date, COUNT(*) FROM score_daily GROUP BY model, date"):
+                out[f"{SCORE_KEY}@{m}|{d}"] = n
         con.close()
     return out
 
@@ -59,20 +63,37 @@ def counts(data_dir):
 def quick_check(data_dir):
     bad = []
     for db in sorted(glob.glob(str(Path(data_dir) / "*.db"))):
+        con = None
         try:
-            r = sqlite3.connect(db).execute("PRAGMA quick_check(1)").fetchone()[0]
+            con = sqlite3.connect(db)
+            r = con.execute("PRAGMA quick_check(1)").fetchone()[0]
         except Exception as e:
             r = f"error: {e}"
+        finally:   # v21: 연결을 닫는다 — 닫지 않으면 Windows 에서 파일이 잠겨 임시 폴더 정리가 실패했다(Codex 검토 부기)
+            if con is not None:
+                con.close()
         print(f"{Path(db).name}: {r}")
         if r != "ok":
             bad.append(Path(db).name)
     return bad
 
 
-def shrunk(before, after, repair=False):
-    """행수가 줄어든 테이블 [(키, 전, 후)]. 전에 있던 테이블이 사라져도 감소로 본다."""
-    return [(k, b, after.get(k, 0)) for k, b in sorted(before.items())
-            if after.get(k, 0) < b and not (repair and k in REPAIR_EXEMPT)]
+def shrunk(before, after, repair_dates=()):
+    """행수가 줄어든 [(키, 전, 후)]. 전에 있던 테이블·그룹이 사라져도 감소로 본다.
+    v21: 수동 재계산(repair_dates)은 score_daily 의 **지정 날짜 그룹만** 예외 — 그 그룹도 다시 채워지지 않았으면(0행) 감소로 본다.
+      v19 는 날짜 하나만 지정해도 score_daily 테이블 전체 감소를 허용했다(Codex 검토 2)."""
+    rd, lost = set(repair_dates), []
+    for k, b in sorted(before.items()):
+        a = after.get(k, 0)
+        if k.startswith(SCORE_KEY + "@") and k.rsplit("|", 1)[1] in rd:
+            if b > 0 and a == 0:
+                lost.append((k, b, a))
+            continue
+        if k == SCORE_KEY and rd:
+            continue   # 테이블 전체 행수는 날짜별 검사로 대신(지정 날짜의 재계산은 행수가 달라질 수 있음)
+        if a < b:
+            lost.append((k, b, a))
+    return lost
 
 
 def main(argv):
@@ -90,9 +111,11 @@ def main(argv):
     bad = quick_check(DATA_DIR)
     before = json.loads(Path(path).read_text(encoding="utf-8")) if Path(path).exists() else {}
     after = counts(DATA_DIR)
-    repair = bool(os.environ.get("REPAIR_DATES", "").strip())
-    lost = shrunk(before, after, repair)
-    for k in sorted(after):
+    repair_dates = [d.strip() for d in os.environ.get("REPAIR_DATES", "").split(",") if d.strip()]
+    lost = shrunk(before, after, repair_dates)
+    n_groups = sum(1 for k in after if "@" in k)
+    print(f"  score_daily (모델, 날짜) 그룹 {n_groups:,}개 날짜별 보존 검사" + (f" · 재계산 예외 {repair_dates}" if repair_dates else ""))
+    for k in sorted(k for k in after if "@" not in k):
         b = before.get(k)
         print(f"  {k}: {b if b is not None else '-'} → {after[k]:,}" + (f" (+{after[k] - b:,})" if b is not None else ""))
     if not before:
@@ -122,17 +145,23 @@ def self_test():
     con.executemany("INSERT INTO score_daily VALUES ('m','20260925',?)", [(f"S{i}",) for i in range(5)])
     con.commit()
     before = counts(d)
-    check("스냅샷: 있는 테이블만(없는 DB·테이블은 뺌)", before == {"us_ohlcv.db:daily_ohlcv": 10, "us_ohlcv.db:score_daily": 5})
+    check("스냅샷: 있는 테이블만(없는 DB·테이블은 뺌) + score_daily 날짜 그룹",
+          before == {"us_ohlcv.db:daily_ohlcv": 10, "us_ohlcv.db:score_daily": 5, "us_ohlcv.db:score_daily@m|20260925": 5})
     con.execute("INSERT INTO daily_ohlcv VALUES ('S99','20260926')")
     con.commit()
     check("증가는 통과", shrunk(before, counts(d)) == [])
     con.execute("DELETE FROM score_daily")
     con.commit()
-    check("score_daily 소실은 차단", shrunk(before, counts(d)) == [("us_ohlcv.db:score_daily", 5, 0)])
-    check("수동 --repair 일 때 score_daily 감소는 허용", shrunk(before, counts(d), repair=True) == [])
+    check("score_daily 소실은 차단(테이블·날짜 그룹 모두)", shrunk(before, counts(d)) ==
+          [("us_ohlcv.db:score_daily", 5, 0), ("us_ohlcv.db:score_daily@m|20260925", 5, 0)])
+    check("지정 날짜를 재계산했는데 0행으로 남으면 차단", shrunk(before, counts(d), ["20260925"]) == [("us_ohlcv.db:score_daily@m|20260925", 5, 0)])
+    con.executemany("INSERT INTO score_daily VALUES ('m','20260925',?)", [(f"S{i}",) for i in range(4)])
+    con.commit()
+    check("지정 날짜가 다시 채워지면(행수 달라도) 허용", shrunk(before, counts(d), ["20260925"]) == [])
+    check("지정 안 한 날짜의 감소는 재계산 중에도 차단", shrunk(before, counts(d), ["20260924"]) != [])
     con.execute("DROP TABLE daily_ohlcv")
     con.commit()
-    check("테이블이 사라지면 감소로 본다", ("us_ohlcv.db:daily_ohlcv", 10, 0) in shrunk(before, counts(d), repair=True))
+    check("테이블이 사라지면 감소로 본다", ("us_ohlcv.db:daily_ohlcv", 10, 0) in shrunk(before, counts(d), ["20260925"]))
     con.close()
     check("quick_check 정상 DB", quick_check(d) == [])
     print("✅ self-test 통과" if ok else "❌ self-test 실패")

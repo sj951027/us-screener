@@ -22,12 +22,11 @@
 GitHub Actions (cron 03:17 UTC 화~토 = 전날 미국 세션 마감분, 한국 낮 12시 무렵 · v11 에서 22:00 UTC 로부터 이동)
   1) Release "data-store"에서 us-data.tar.gz 내려받아 이전 상태 복원
   2) 수집기 9종 실행 (씨앗→시세→지수→시총순환→격주공매도→일별공매도→XBRL→실적일→내부자) → 시세 복구·점검(us_price_repair)
-  3) us_page_data.py → docs/data/us_latest.csv 자동 커밋 (GitHub Pages 표 갱신)
-                     + us_ohlcv.db score_daily 관측 적재
-  4) us_notify_test.py → 텔레그램 top10 (휴장일 가드: 최신일≠오늘ET면 생략, 수동실행은 FORCE)
-  5) 무결성 게이트(PRAGMA quick_check 전 DB) 통과 시에만 tar 재업로드
-     + 금요일엔 us-data-weekly.tar.gz 2세대 백업
-  실패 시: if:failure() 단계가 텔레그램으로 로그 링크 전송
+  3) us_page_data.py → score_daily 관측 적재(us_mus_v0 · us_rvdtc_a · us_mus_v1_ind) + docs/data/us_latest.csv·us_tilt.csv·us_history.json
+     (완전성 게이트·0행 세션 차단·자동 보충, 새 세션 없으면 생략, 점수는 있는데 CSV 가 뒤처지면 출력물만 복원) → 옵션·애널리스트 스냅샷(관측)
+  4) 페이지 커밋(실패해도 계속) → 무결성 게이트(quick_check + 추가 전용 테이블·score_daily 날짜별 행수 감소 차단, us_integrity.py)
+  5) 정본 tar 업로드(금요일 세션엔 us-data-weekly.tar.gz) → 텔레그램(맨 위 점검 상태줄 · 상위10 · indmom 10 · 관측 현황)
+  세션 날짜는 잡 시작에 고정(US_SESSION_DATE). 실패 알림: failure()·cancelled()·비치명 스텝 실패(outcome)·삼킨 예외(SOFT_FAIL_*) — 스텝별 결과를 한 줄로
 ```
 
 - 표시: https://sj951027.github.io/us-screener/us.html (Pages, main /docs) — 검색·정렬·필터.
@@ -90,6 +89,21 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   표시 us_tilt.html·기록 score_daily 뿐(가중치 0). 본구축 때 PREREGISTER 후보.
 
 ## §5. 결정 로그
+
+- 2026-09-27 (v21, patch_note/v21_20260927.md — 외부 검토(Codex) 7건 + 전수 점검 2갈래): 시세 0행 세션 탐지·차단, 지수는 거래일 '보태기만',
+  알림 거래일 일치, score_daily (모델,날짜)별 보존 검사, 출력물 복원(저장 순위·CI 에서만), self-test 종료코드, 실패 알림에 비치명 스텝·삼킨 예외,
+  indmom 빈 날 경고·자동 보충, 점수 빈 날 텔레그램 경고, 옵션·애널리스트 순위 기준일=최근 온전한 거래일, 애널리스트 빈 응답 차단 감지,
+  OOS D k/40 표시. 정본 사본 0-diff(거래일 881일·점수·CSV). **판정 입력 경로 변경이라 D0(10-01) 전 커밋 필수.**
+
+- 2026-09-27 (**PREREGISTER 1라운드 스펙 확정**, research/PREREGISTER_us_20260927.md): 후보 2개 us_mus_v1(현행식) · us_mus_v1_ind(업종 게이트),
+  D0 = 2026-10-01 세션(09-29~10-01 러너로 v19·v20 확인 뒤), 20앵커 × h20 → D39 = 2026-11-25, 주 통계량 = 비용(왕복 0.2%p) 차감 top50 EW − 가드
+  유니버스 EW, 채택 = 97.5% 블록 부트스트랩 CI 하한 > 0 + 방향 일치(적중 60% 조건 삭제). void = 판정 입력 경로(시세 수집·점수·거래일 판정·SPX·업종)
+  변경 — 관측 전용 수집기·표시·알림 변경은 void 아님(범위를 동결 전에 명시). 초안 §6 결정 전부 사용자 확인.
+
+- 2026-09-27 (v20, patch_note/v20_20260927.md): indmom 을 관측 모델 `us_mus_v1_ind` 로 배선(가중치 0, 20260928 세션부터, score_daily 에
+  industry 컬럼), 모델별 과거 기록·그날 대비 등락 페이지(docs/us_history.html, EW·SPX 병기), 텔레그램에 indmom 상위 10, 애널리스트 수집기
+  (추정치 스냅샷=소급 불가 누적 · 등급·목표가 이력=소급 가능, 실측 AAPL 2012~), 8-K 전 항목 저장, 세션 날짜를 잡 시작에 고정(US_SESSION_DATE).
+  실행 시간 실측 최대 51.7분 + 애널리스트 ≤20분 < 한도 180분. 코드 0-diff(같은 데이터 old/new 비교).
 
 - 2026-09-27 (v19, patch_note/v19_20260927.md — 전수 점검 3갈래 후속): 거래일 = SPX 일봉 있는 날(9/23 의 6% 부분 수집일 잔행 오분류가
   9/21 이중 계산 원인 — v18 서술 정정, 정본 전 이력 0-diff), ET 16:30 전 당일 봉 저장 안 함(USDKRW 일요일 행 실측), 업로드 전

@@ -39,6 +39,13 @@ class CalendarTests(unittest.TestCase):
         with frozen(dt.datetime(2026, 9, 29, 7, 0, tzinfo=ET)):
             self.assertEqual(cal.session_date(), "20260929")
 
+    def test_session_date_env_override(self):
+        # v20: 잡 시작에 정한 세션 날짜가 뒤쪽 스텝에서도 그대로(시각이 ET 06시를 넘어도)
+        with mock.patch.dict("os.environ", {"US_SESSION_DATE": "20260928"}):
+            with frozen(dt.datetime(2026, 9, 29, 7, 30, tzinfo=ET)):
+                self.assertEqual(cal.session_date(), "20260928")
+                self.assertEqual(cal.session_weekday(), 0)
+
     def test_last_complete_date(self):
         with frozen(dt.datetime(2026, 9, 29, 4, 30, tzinfo=ET)):      # 새벽: 어제까지만 완결
             self.assertEqual(cal.last_complete_date(), "20260928")

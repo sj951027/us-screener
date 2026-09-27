@@ -89,18 +89,23 @@ def et_today():
 def pick_universe(ohlcv_con, top_n=TOP_N):
     """유동성 상위 top_n(가드 close≥$5) ∪ 관측 모델 종목. 실패 시 빈 리스트(비치명)."""
     # v19: 원시 MAX(date)·DISTINCT date 대신 공용 거래일 — 휴장일 잔행 1행이 '오늘'로 잡혀 휴장 가드를 통과하던 경로 차단
-    from us_calendar import index_dates_for, trading_dates
-    td, _ = trading_dates(ohlcv_con, index_dates=index_dates_for(OHLCV_DB))
+    from us_calendar import baseline, index_dates_for, trading_dates
+    from us_price_repair import MIN_COVERAGE
+    td, cnt = trading_dates(ohlcv_con, index_dates=index_dates_for(OHLCV_DB))
     if not td:
         return [], None
     last = td[-1]
-    d20 = td[-20:][::-1]
+    # v21: 유동성 순위는 최근 '온전한' 거래일(행수 ≥ 분모의 90%) 기준 — 부분 수집일(16%)엔 당일 봉이 있는 종목(정렬 앞쪽)만
+    #   남아 스냅샷 대상이 쏠렸다(소급 불가). 휴장 가드용 last 는 그대로 돌려준다.
+    rank_day = next((d for d in reversed(td) if cnt[d] >= MIN_COVERAGE * baseline(cnt, d)), last)
+    k = td.index(rank_day)
+    d20 = td[max(0, k - 19): k + 1][::-1]
     top = [r[0] for r in ohlcv_con.execute(f"""
         SELECT symbol FROM daily_ohlcv
         WHERE date IN ({",".join("?" * len(d20))})
         GROUP BY symbol
         HAVING MAX(CASE WHEN date=? THEN close END) >= 5
-        ORDER BY AVG(close * volume) DESC LIMIT ?""", (*d20, last, top_n))]
+        ORDER BY AVG(close * volume) DESC LIMIT ?""", (*d20, rank_day, top_n))]
     models = [r[0] for r in ohlcv_con.execute("""
         SELECT DISTINCT symbol FROM score_daily s
         WHERE date = (SELECT MAX(date) FROM score_daily WHERE model=s.model)

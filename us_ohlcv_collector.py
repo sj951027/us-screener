@@ -816,6 +816,8 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit as e:
+        if "--self-test" in sys.argv:   # v21: self-test 실패 종료코드는 그대로 전달(삼키면 CI 가 실패를 못 봄 — Codex 검토 6)
+            raise
         print(e)
     except Exception as e:
         print(f"❌ 실패(비치명): {e}")

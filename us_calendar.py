@@ -15,7 +15,13 @@ SESSION_ROLLOVER_H = 6   # ET 06시 전 실행 = 전날 세션. 실제 시작 04
 
 
 def session_now():
-    """ET 현재 시각에서 롤오버만큼 뺀 시각. zoneinfo 가 없으면 UTC−5 근사."""
+    """ET 현재 시각에서 롤오버만큼 뺀 시각. zoneinfo 가 없으면 UTC−5 근사.
+    v20: 환경변수 US_SESSION_DATE(YYYYMMDD)가 있으면 그 날짜로 고정 — 워크플로가 잡 시작 때 한 번 정해 모든 스텝이 같은 세션을 본다.
+      (각 스텝이 자기 시각에 판정하면 뒤쪽 스텝이 ET 06시를 넘겨 혼자 다음 날로 넘어가 '휴장일'로 건너뛸 수 있었다 — 실제 시작 04:30 ET, 여유 1.5시간)"""
+    import os
+    fixed = os.environ.get("US_SESSION_DATE", "").strip()
+    if len(fixed) == 8 and fixed.isdigit():
+        return dt.datetime(int(fixed[:4]), int(fixed[4:6]), int(fixed[6:]), 12, 0)
     back = dt.timedelta(hours=SESSION_ROLLOVER_H)
     try:
         from zoneinfo import ZoneInfo
@@ -66,8 +72,10 @@ def is_trading_day(d, n, recent_max, index_dates=None):
     """v19: 거래일인가. 지수(SPX) 일봉 기간 안이면 '지수 봉이 있는 날'로 판정한다 — 휴장일 잔행(지수 봉 없음)과
     심한 부분 수집일(지수 봉 있음)을 매직넘버 없이 가른다. 실측: 09-23 실행 때 20260922 가 ~400행(6%)이라 v09 10% 규칙이
     잔행으로 오분류 → 최신일이 9/21 로 남아 9/21 점수를 두 번 계산했다. 지수 기간 밖(수집 실패·초기)은 v09 10% 규칙."""
-    if index_dates and min(index_dates) <= d <= max(index_dates):
-        return d in index_dates
+    # v21: 지수는 거래일을 '보태기'만 한다 — 지수 봉이 있으면 행수와 무관하게 거래일(6% 부분 수집일 구제), 없으면 v09 10% 규칙.
+    #   v19 는 지수 기간 안에서 '지수 봉 없음 = 휴장'으로 봐서, 지수 수집이 중간에 빠진 날의 정상 시세(100%)까지 버렸다(Codex 검토 3).
+    if index_dates and d in index_dates:
+        return True
     return not recent_max or n >= STRAY_FRAC * recent_max
 
 
@@ -81,6 +89,16 @@ def trading_dates(con, counts=None, index_dates=None):
         dates.append(d)
         recent = (recent + [n])[-STRAY_WINDOW:]
     return dates, counts
+
+
+def missing_sessions(counts, index_dates):
+    """v21: 지수(SPX) 봉은 있는데 시세가 0행인 세션(시세 기간 안) — 전면 수집 실패일. trading_dates 는 행이 있는 날만 돌므로
+    이런 날은 목록에서 조용히 사라진다(Codex 검토 1). 가격 창에 빈 열로 끼우면 mom12 기준일(t−21·t−252)에 걸릴 때 전 종목이
+    결측되므로 끼우지 않고, 점검 경고 · 복구 대상 · (최신이면) 부분 수집 차단으로 다룬다."""
+    if not index_dates or not counts:
+        return []
+    lo = min(counts)
+    return sorted(d for d in index_dates if d >= lo and counts.get(d, 0) == 0)
 
 
 MARKET_SETTLE_ET = dt.time(16, 30)   # v19: 정규장 16:00 마감 + 30분 — 이보다 이르면 오늘(ET) 봉은 미완성으로 본다

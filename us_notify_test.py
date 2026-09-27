@@ -18,7 +18,9 @@ mom12 + upratio63 + size(거래대금) 순위합의 당일 상위 종목을 텔�
 [v09 2026-09-11] 잔행 날짜(휴장일에 야후가 흘린 1~2행 — 실측 20260907 CREG) 를 거래일에서 제외(게이트
 분모·계산 창 모두, us_page_data 와 동일 기준). 부분 수집 메시지는 '다음 실행 자동 보충' 안내로 변경.
 """
-from us_calendar import baseline, index_dates_for, trading_dates   # v18: us_page_data 와 같은 정의를 복제 대신 공유
+from us_calendar import baseline, index_dates_for, missing_sessions, trading_dates   # v18: us_page_data 와 같은 정의를 복제 대신 공유
+OOS_D0, OOS_LEN = "20261001", 40   # v21: research/PREREGISTER_us_20260927.md — 판정 후보 2개의 OOS 시계 표시용
+OOS_MODELS = {"us_mus_v0": "us_mus_v1", "us_mus_v1_ind": "us_mus_v1_ind"}   # 기록 model → 판정 id
 SHORT_STALE_DAYS = 30   # v19: 격주 공매도는 15일 주기 + 게시 지연 ~8일 — 정상이면 결제일이 시세보다 최대 ~23일 늦다
 import argparse
 import os
@@ -43,6 +45,7 @@ COMPLETENESS_MIN = 0.9  # [v08] 완전성 게이트 기준(us_page_data 와 동�
 
 PAGE_URL = "https://sj951027.github.io/us-screener/us.html"  # 전체 표(GitHub Pages)
 TILT_URL = "https://sj951027.github.io/us-screener/us_tilt.html"  # 급등형 틸트(v 2026-07-18)
+HIST_URL = "https://sj951027.github.io/us-screener/us_history.html"  # v20: 모델별 과거 기록·기록일 대비 등락
 
 
 def _fmt_n(n):
@@ -88,13 +91,27 @@ def db_health():
             st = c.execute("SELECT MAX(settlement_date) FROM short_interest").fetchone()[0]
         except sqlite3.OperationalError:
             st = None
+        try:   # v21: 최근 10거래일 중 점수 기록이 빈 날(판정 void 조건 '빈 날 3일 초과'를 미리 보게)
+            from us_page_data import IND_START
+            recent = td[-10:-1]   # 최신일은 부분 수집 경고가 따로 본다
+            have = {m: {d for (d,) in c.execute("SELECT DISTINCT date FROM score_daily WHERE model=? AND date>=?", (m, recent[0]))}
+                    for m in ("us_mus_v0", "us_mus_v1_ind")} if recent else {}
+            holes = sorted({d for d in recent if d not in have.get("us_mus_v0", set())}
+                           | {d for d in recent if d >= IND_START and d not in have.get("us_mus_v1_ind", set())})
+        except Exception:
+            holes = []
         c.close()
+        if holes:
+            warn.append(f"점수 기록 빈 날 {', '.join(holes)} — 자동 보충 대기 중이면 정상, 이어지면 repair_dates")
         if len(td) >= 2:
             n_t, n_p = cnt[td[-1]], baseline(cnt, td[-1])
             ratio = n_t / n_p if n_p else 1.0
             parts.append(f"최신일 {td[-1]} {n_t:,}행({ratio:.0%})")
             if ratio < COMPLETENESS_MIN:
                 warn.append(f"시세 최신일 부분 수집 {ratio:.0%}")
+            zero = missing_sessions(cnt, index_dates_for(OHLCV_DB))[-3:]
+            if zero:   # v21: 지수 봉은 있는데 시세 0행인 세션(전면 수집 실패)
+                warn.append(f"시세 0행 세션 {', '.join(zero)} — price_repair_dates 로 복구")
             if sd and sd < td[-1] and ratio >= COMPLETENESS_MIN:
                 warn.append(f"점수 기록 최신 {sd} < 시세 {td[-1]} — 로그 'Build page data' 확인")
             if st:
@@ -111,8 +128,11 @@ def db_health():
         parts.append(q("us_shortvol.db",
                        "SELECT MAX(date) FROM short_volume_daily", "일별공매도", str))
     parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM xbrl_facts", "재무"))
-    parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM earnings_events", "실적일"))
+    parts.append(q("us_fundamentals.db", "SELECT SUM(is_earnings) FROM earnings_events", "실적공표"))   # v21: v20 부터 8-K 전체 저장 — 실적공표만 센다
     parts.append(q("us_fundamentals.db", "SELECT COUNT(*) FROM insider_tx", "내부자"))
+    if (DATA_DIR / "us_analyst.db").exists():   # v20: 애널리스트 등급변경 이력·추정치 스냅샷 최신일
+        parts.append(q("us_analyst.db", "SELECT COUNT(*) FROM rating_changes", "등급변경"))
+        parts.append(q("us_analyst.db", "SELECT MAX(date) FROM eps_snapshot", "추정치", str))
     try:  # 분할 재조정 잔여 큐(수집기 v2026-08-21) — 테이블 없으면 생략
         c = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
         nq = c.execute("SELECT COUNT(*) FROM adjust_queue").fetchone()[0]
@@ -128,7 +148,15 @@ def db_health():
 def build_message():
     """(메시지, 최신일, partial). partial=True 면 순위 없이 경고만(v08 — 반토막 유니버스 순위 전송 방지)."""
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-    all_dates, counts = trading_dates(con)   # [v09] 잔행 날짜 제외(us_page_data 와 동일)
+    idx_dates = index_dates_for(OHLCV_DB)   # v21: 페이지와 같은 거래일 정의(v19 는 건강줄에만 넘기고 순위 계산엔 빠뜨림 — Codex 검토 4)
+    all_dates, counts = trading_dates(con, index_dates=idx_dates)   # [v09] 잔행 날짜 제외(us_page_data 와 동일)
+    gone = [d for d in missing_sessions(counts, idx_dates) if d > all_dates[-1]]
+    if gone:   # v21: 지수 봉은 있는데 시세 0행인 최신 세션 = 부분 수집 0% — 페이지와 같은 판정으로 순위 전송 차단
+        con.close()
+        return "\n".join([
+            "⚠️ <b>[US] 시세 부분 수집 의심</b>",
+            f"최신 세션 {gone[-1]} 시세 0행(지수 봉은 있음) = 0% — 순위·점수 적재 생략.",
+            "다음 실행에서 시세가 채워지면 자동 보충(v09). 같은 경고가 이틀 연속이면 price_repair_dates 로 복구."]), gone[-1], True
     dates = all_dates[-LOOKBACK:]
     if len(dates) >= 2:  # [v08] 완전성 게이트 — us_page_data 와 같은 기준(전일의 90%)
         n_t, n_p = counts[dates[-1]], baseline(counts, dates[-1])
@@ -193,8 +221,19 @@ def build_message():
              f"기준일 {ds[i]} · 유니버스 {len(score):,}", ""]
     for r, (sym, _sc) in enumerate(top.items(), 1):
         lines.append(f"{r:2d}. <b>{sym}</b> — {names.get(sym, '')}")
+    try:   # v20: 업종 모멘텀 게이트 관측(us_mus_v1_ind) 상위 10 — page_data 가 기록한 것을 읽는다(점수식 복제 안 함)
+        c_i = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
+        ind_top = c_i.execute("SELECT symbol, industry FROM score_daily WHERE model='us_mus_v1_ind' AND date=? "
+                              "ORDER BY rank LIMIT 10", (ds[i],)).fetchall()
+        c_i.close()
+        if ind_top:
+            lines += ["", "🏭 <b>업종 모멘텀 게이트</b>(상위 20% 업종 안의 상위 10 · 관측)"]
+            lines += [f"{r:2d}. <b>{s}</b> — {ind or ''}" for r, (s, ind) in enumerate(ind_top, 1)]
+    except Exception:
+        pass
     lines += ["", f"📊 점수·모멘텀·필터 상세: {PAGE_URL}",
-              f"🎰 급등형 틸트(고변동·저공매도) 10: {TILT_URL}"]
+              f"🎰 급등형 틸트(고변동·저공매도) 10: {TILT_URL}",
+              f"🗓 모델별 과거 기록·그날 대비 등락: {HIST_URL}"]
 
     # 📈 관측 현황 (2026-07-18, 진행바+모델 성과) — 모델별 score_daily 누적 일수와
     #   forward h5 rank-IC 를 즉석 계산해 함께 표시(한국판 현황판과 동일 사상).
@@ -212,7 +251,7 @@ def build_message():
                 k = max(0, min(8, round(8 * n_ / target)))
                 return "▓" * k + "░" * (8 - k)
 
-            lines += ["", "📈 <b>관측 현황</b> (미등록 관측 — OOS 40거래일 시계는 PREREGISTER 뒤 시작 · h5 IC는 참고)"]
+            lines += ["", f"📈 <b>관측 현황</b> (판정 후보 2개는 D0 {OOS_D0[4:6]}-{OOS_D0[6:]} 부터 OOS {OOS_LEN}거래일 · h5 IC 는 판정 아님)"]
             for m in models:
                 dts = [d_ for (d_,) in c2.execute(
                     "SELECT DISTINCT date FROM score_daily WHERE model=? ORDER BY date", (m,))]
@@ -231,7 +270,12 @@ def build_message():
                     ics.append(float(np.corrcoef(s[mm].rank(), b[mm].rank())[0, 1]))
                 perf = (f" · h5 IC {np.mean(ics):+.2f}(n{len(ics)})" if ics
                         else " · 측정 대기")
-                lines.append(f"  {m} {_bar(len(dts))} {len(dts)}/40일{perf}")
+                if m in OOS_MODELS:   # v21: 판정 시계는 D0 부터 센다(그 전 관측일은 판정에 안 씀)
+                    k_oos = sum(1 for d_ in dts if d_ >= OOS_D0)
+                    tag = f"OOS D{k_oos}/{OOS_LEN}" if k_oos else f"OOS 시작 전(D0 {OOS_D0})"
+                    lines.append(f"  {m} {_bar(k_oos)} {tag}{perf}")
+                else:
+                    lines.append(f"  {m} 관측 {len(dts)}일{perf}")
         c2.close()
     except Exception:
         pass
@@ -243,6 +287,15 @@ def build_message():
         pass
     lines += ["", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]
     return "\n".join(lines), ds[i], False
+
+
+def _soft_fail(tag):
+    """v21: 비치명으로 삼킨 실패를 워크플로 실패 알림에 알린다(GITHUB_ENV 에 SOFT_FAIL_<tag>=1). 로컬 실행에선 아무것도 안 함.
+    스크립트가 예외를 삼키고 exit 0 으로 끝나면 continue-on-error 스텝의 outcome 이 success 라 알림 조건이 못 잡았다."""
+    p = os.environ.get("GITHUB_ENV")
+    if p:
+        with open(p, "a", encoding="utf-8") as fh:
+            fh.write(f"SOFT_FAIL_{tag}=1\n")
 
 
 def send(msg):
@@ -285,7 +338,11 @@ def main():
         # [v08] 평일인데 오늘 시세가 없으면 한 줄만 보낸다 — 휴장일이면 정상, 아니면 수집 실패
         #   (리뷰 H4: 0행 수집일이 휴장일로 위장돼 아무도 몰랐던 구멍). 연 ~10회 휴장일 잡음은 감수.
         if now_session.weekday() < 5:
-            send(f"⏭ [US] 오늘(ET {today_et}) 시세 없음 — 최신 {latest}. 휴장일이면 정상, 아니면 수집 실패(로그 '증분 완료' 행수 확인)")
+            idx_n = index_dates_for(OHLCV_DB)   # v21: 지수 봉으로 휴장/수집 실패를 가려 문구를 단정한다
+            spx_last = max(idx_n) if idx_n else None
+            why = (f"지수(SPX)는 {today_et} 봉이 있음 → 시세 수집 실패(로그 '증분 완료' 확인)" if spx_last and spx_last >= today_et
+                   else f"지수(SPX)도 {spx_last or '-'} 까지 → 휴장일 가능성 높음(수집 실패면 지수도 함께 실패한 것)")
+            send(f"⏭ [US] 오늘(ET {today_et}) 시세 없음 — 최신 {latest}. {why}")
         return
     send(msg)
 
@@ -294,5 +351,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"❌ 실패(비치명): {e}")
+        print(f"::error::❌ 텔레그램 알림 실패(비치명): {e}")
+        _soft_fail("NOTIFY")
         sys.exit(0)

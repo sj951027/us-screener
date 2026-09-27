@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US 스크리너 · 모델별 과거 기록</title>
+<!-- v20 2026-09-27: 관측 모델별 과거 기록일의 목록과 '그날 종가 → 최신 기준일 종가' 등락. 데이터: data/us_history.json(us_page_data.write_history) -->
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --line:#262b36; --txt:#e6e8ec; --sub:#9aa3b2;
+    --accent:#4da3ff; --warn:#f0b429; --warnbg:#2a230f; --good:#2dd4a7; --bad:#f0997b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;font-size:14px;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{font-size:18px;margin:0 0 4px}
+  .sub{color:var(--sub);font-size:12px;margin-bottom:14px}
+  .sub a{color:var(--accent)}
+  .warn{background:var(--warnbg);border:1px solid var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12.5px}
+  .warn b{color:var(--warn)}
+  .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .tab{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12.5px;color:var(--sub);user-select:none}
+  .tab.on{border-color:var(--accent);color:var(--accent);background:#101b28}
+  .desc{color:var(--sub);font-size:12px;margin:0 0 10px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--sub)}
+  .chip b{color:var(--txt)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{padding:7px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+  th{background:var(--card);color:var(--sub);font-weight:600;position:sticky;top:0}
+  th:first-child,td:first-child{text-align:left}
+  tr.day{cursor:pointer}
+  tr.day:hover td{background:#1b1f28}
+  tr.day.open td{background:#101b28}
+  tr.detail td{background:#12151b;padding:10px 12px;text-align:left;white-space:normal}
+  .pos{color:var(--good)} .neg{color:var(--bad)} .muted{color:var(--sub)}
+  .picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 14px;font-size:12px}
+  .picks span b{color:var(--txt)}
+  .loading{color:var(--sub);text-align:center!important;padding:24px!important}
+  @media (max-width:640px){ th.opt,td.opt{display:none} .wrap{padding:12px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>모델별 과거 기록 · 그날 대비 등락</h1>
+  <div class="sub">각 기록일에 모델이 뽑은 목록과, 그날 종가에서 <b>최신 스크리너 기준일 종가</b>까지의 등락(수정종가 — 분할·배당 반영) ·
+    <a href="us.html">← 오늘의 전체 표</a> · <a href="us_tilt.html">급등형 틸트</a></div>
+  <div class="warn"><b>⚠️ 관측 기록 · 매수신호 아님</b> — 전부 검증 전(미등록) 관측 모델이다. 비용 0 · 종가 기준 ·
+    상장폐지 종목은 최신 종가가 없어 평균에서 빠진다(성적이 좋게 보이는 방향). 날짜끼리 기간이 겹치므로 여러 줄을 더하거나 평균 내면 안 된다.
+    비교는 <b>EW</b>(그날 가드 통과 전 종목 동일가중 평균)와의 차이로 본다 — SPX 는 참고.</div>
+  <div class="tabs" id="tabs"></div>
+  <p class="desc" id="desc"></p>
+  <div class="meta" id="meta"></div>
+  <div class="tablewrap">
+    <table><thead><tr>
+      <th>기록일</th><th>경과<br>거래일</th><th class="opt">상위 10<br>평균</th><th id="thN">상위 N<br>평균</th>
+      <th>EW<br>평균</th><th>차이<br>(N−EW)</th><th class="opt">SPX</th><th class="opt">오른<br>비율</th>
+    </tr></thead><tbody id="tb"><tr><td colspan="8" class="loading">불러오는 중…</td></tr></tbody></table>
+  </div>
+</div>
+<script>
+const MODELS = {
+  us_mus_v0: {label:'기본 모델 (상위 50)', desc:'12-1 모멘텀 + 63일 상승일 비율 + 거래대금 순위합. 2026-07-13 부터 매 거래일 기록.'},
+  us_mus_v1_ind: {label:'업종 모멘텀 게이트 (상위 50)', desc:'업종 평균 12-1 모멘텀 상위 20% 업종(구성 10종목 이상) 안에서 기본 점수 상위 50. 사전등록 후보 — 2026-09-28 세션부터 기록.'},
+  us_rvdtc_a: {label:'급등형 틸트 (10)', desc:'기본 모델 상위 50 중 고변동 + 저공매도. 급등도 급락도 커지는 복권형 관측(기대수익 우위 가설 아님).'}
+};
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct = v => v===null||v===undefined ? '<span class="muted">–</span>'
+  : `<span class="${v>0?'pos':v<0?'neg':''}">${v>0?'+':''}${v.toFixed(2)}%</span>`;
+const dfmt = d => { const t=new Date(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6));
+  return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}(${'일월화수목금토'[t.getDay()]})`; };
+let DATA=null, cur='us_mus_v0';
+
+function render(){
+  const m = DATA.models[cur] || {rows:[], top_n:0};
+  document.getElementById('desc').textContent = MODELS[cur].desc;
+  document.getElementById('thN').innerHTML = `상위 ${m.top_n}<br>평균`;
+  const rows = m.rows.filter(r => r.td > 0);
+  const L = DATA.latest, age = Math.floor((Date.now() - new Date(+L.slice(0,4), +L.slice(4,6)-1, +L.slice(6))) / 864e5);
+  document.getElementById('meta').innerHTML =
+    `<span class="chip">최신 기준일 <b>${dfmt(DATA.latest)}</b></span>`+
+    `<span class="chip">기록 <b>${m.rows.length}</b>일</span>`+
+    `<span class="chip">판정 계산과 다름(비용 0 · 최신일까지 · 상폐 제외) — 판정은 research/VERDICT 문서</span>`+
+    (age > 5 ? `<span class="chip" style="color:var(--warn)"><b>⚠️ 최신 기준일이 ${age}일 전 — 수집 지연·휴장 확인</b></span>` : '')+
+    `<span class="chip">생성 ${esc(DATA.generated_utc)} UTC</span>`;
+  const tb = document.getElementById('tb');
+  if (!m.rows.length){ tb.innerHTML = '<tr><td colspan="8" class="loading">아직 기록 없음 — 첫 기록 뒤 다음 거래일부터 등락이 보입니다</td></tr>'; return; }
+  tb.innerHTML = m.rows.map((r,k) => {
+    const diff = (r.avg!==null && r.ew!==null) ? +(r.avg - r.ew).toFixed(2) : null;
+    if (r.td === 0)   // 최신 기준일 = 오늘 목록 — 등락은 다음 거래일부터
+      return `<tr class="day" data-k="${k}"><td>${dfmt(r.date)}</td><td>0</td>`+
+        `<td colspan="6" class="muted" style="text-align:left">오늘 목록 (${r.n}종목) — 등락은 다음 거래일부터 · 눌러서 목록 보기</td></tr>`;
+    const d0 = (cur !== 'us_rvdtc_a' && r.date === '20261001') ? ' <span class="muted">· 판정 D0</span>' : '';
+    return `<tr class="day" data-k="${k}"><td>${dfmt(r.date)}${d0}</td><td>${r.td}</td>`+
+      `<td class="opt">${pct(r.avg10)}</td><td>${pct(r.avg)}</td><td>${pct(r.ew)}</td><td><b>${pct(diff)}</b></td>`+
+      `<td class="opt">${pct(r.spx)}</td><td class="opt">${r.hit===null?'–':r.hit+'%'}</td></tr>`;
+  }).join('');
+  tb.querySelectorAll('tr.day').forEach(tr => tr.onclick = () => {
+    const nx = tr.nextElementSibling;
+    if (nx && nx.classList.contains('detail')){ nx.remove(); tr.classList.remove('open'); return; }
+    const r = m.rows[+tr.dataset.k];
+    tr.classList.add('open');
+    tr.insertAdjacentHTML('afterend', `<tr class="detail"><td colspan="8"><div class="picks">`+
+      r.items.map(([s,rk,v]) => `<span>${rk}. <b>${esc(s)}</b> ${pct(v)}</span>`).join('')+
+      `</div></td></tr>`);
+  });
+}
+
+fetch('data/us_history.json?ts='+Date.now())
+  .then(r => { if(!r.ok) throw 0; return r.json(); })
+  .then(j => {
+    DATA = j;
+    document.getElementById('tabs').innerHTML = Object.keys(MODELS).map(k =>
+      `<span class="tab${k===cur?' on':''}" data-m="${k}">${MODELS[k].label}</span>`).join('');
+    document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+      cur = t.dataset.m; document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x===t)); render(); });
+    render();
+  })
+  .catch(() => { document.getElementById('tb').innerHTML =
+    '<tr><td colspan="8" class="loading">데이터를 불러오지 못함 (data/us_history.json) — Actions 최근 실행 확인</td></tr>'; });
+</script>
+</body>
+</html>

@@ -88,6 +88,8 @@ jobs:
           # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4). v11: 'ET 세션 요일'(ET 06시 이전이면 전날) — 화~토 UTC 실행과 맞춤
           # v17: 규칙은 us_calendar.py 한 곳 — `python us_calendar.py` 가 ISO 요일(월=1…일=7)을 찍는다
           echo "RUN_DOW=$(python us_calendar.py)" >> "$GITHUB_ENV"
+          # v20: 세션 날짜를 잡 시작에 한 번 고정 — 뒤쪽 스텝(옵션·애널리스트·알림)이 ET 06시를 넘겨도 같은 세션으로 판정
+          echo "US_SESSION_DATE=$(python -c 'from us_calendar import session_date; print(session_date())')" >> "$GITHUB_ENV"
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 
@@ -173,6 +175,16 @@ jobs:
         # v06 2026-09-06: 첫 5일 실측(516/516 성공·잘림 0·211s)으로 확대 합의 조건 충족 → top1000
         run: python us_options_collector.py --max-symbols 1000
 
+      # v20 2026-09-27: 애널리스트 추정치 스냅샷(소급 불가 → 오늘부터 누적) + 등급·목표가 변경 이력(소급 가능, 회당 300종목 순환).
+      #   관측 전용·비치명. 스냅샷은 유동성 상위 500 ∪ 관측 모델 종목(옵션 첫 적재와 같은 보수적 시작 — 실측 뒤 확대 검토).
+      - name: Analyst snapshot (관측 전용)
+        id: analyst
+        timeout-minutes: 30
+        continue-on-error: true
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+        run: python us_analyst_collector.py
+
       - name: Commit page data (GitHub Pages 갱신)
         id: pages
         continue-on-error: true   # v08: 푸시 실패가 DB 업로드를 막지 않게(리뷰 H3) — 페이지는 다음날 따라잡음
@@ -182,7 +194,9 @@ jobs:
           # v2026-07-18: us_tilt.csv(급등형 틸트 관측) 함께 커밋 — 없으면 무시(비치명)
           git add docs/data/us_latest.csv
           git add docs/data/us_tilt.csv 2>/dev/null || true
-          git diff --cached --quiet || (git commit -m "data: us_latest 자동 갱신" && git pull --rebase && git push)
+          git add docs/data/us_history.json 2>/dev/null || true   # v20: 모델별 과거 기록·등락(us_history.html)
+          # v21: 동시에 대기하던 실행이 먼저 페이지를 갱신했으면(충돌) 이번 커밋은 버리고 넘어간다 — 정본 업로드는 계속
+          git diff --cached --quiet || (git commit -m "data: us_latest 자동 갱신" && { git pull --rebase || { git rebase --abort; echo "::warning::다른 실행이 먼저 페이지를 갱신 — 이번 페이지 커밋 생략"; exit 0; }; } && git push)
 
       # 손상된 DB 를 업로드하면 멀쩡한 이전본을 덮어써 버린다 — quick_check 통과 시에만 진행.
       # v19: + 추가 전용 테이블 행수 감소 검사(us_integrity.py). score_daily 같은 작은 테이블이 비어도 50% 크기 게이트는 통과했다.
@@ -239,11 +253,15 @@ jobs:
       # v19: 취소·타임아웃에도(cancelled), 비치명 페이지 푸시 실패에도 알림. 문구에 스텝별 결과를 넣어 급한지(업로드 실패)
       #   아닌지(복구 게이트만 실패 — 정본은 반영됨) 바로 구분되게.
       - name: Failure alert (실패 시 텔레그램 한 줄)
-        if: failure() || cancelled() || steps.pages.outcome == 'failure'
+        # v21: continue-on-error 스텝은 실패해도 job 은 성공이라 failure() 로 안 잡힌다 — 스텝별 outcome 을 조건에 직접 넣는다(Codex 검토 7)
+        if: >-
+          failure() || cancelled() || steps.pages.outcome == 'failure' || steps.page_data.outcome == 'failure' ||
+          steps.options.outcome == 'failure' || steps.analyst.outcome == 'failure' || steps.notify.outcome == 'failure' ||
+          env.SOFT_FAIL_PAGE == '1' || env.SOFT_FAIL_NOTIFY == '1' || env.SOFT_FAIL_ANALYST == '1'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="❌ [US] collect-us-data ${{ job.status == 'success' && '(페이지 푸시만 실패 · 정본은 정상)' || job.status }} — 정본 업로드 ${{ steps.upload.outcome || '미실행' }} · 점수·페이지 ${{ steps.page_data.outcome || '-' }} · 페이지 푸시 ${{ steps.pages.outcome || '-' }} · 옵션 ${{ steps.options.outcome || '-' }} · 시세 복구 ${{ steps.price_repair.outcome || '-' }} — 로그: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
+            -d text="❌ [US] collect-us-data ${{ job.status == 'success' && '(일부 단계 실패 · 정본 업로드는 정상)' || job.status }} — 정본 업로드 ${{ steps.upload.outcome || '미실행' }} · 점수·페이지 ${{ steps.page_data.outcome || '-' }} · 페이지 푸시 ${{ steps.pages.outcome || '-' }} · 옵션 ${{ steps.options.outcome || '-' }} · 애널리스트 ${{ steps.analyst.outcome || '-' }} · 알림 ${{ steps.notify.outcome || '-' }} · 삼킨 실패 ${{ env.SOFT_FAIL_PAGE && '점수·페이지 ' || '' }}${{ env.SOFT_FAIL_NOTIFY && '알림 ' || '' }}${{ env.SOFT_FAIL_ANALYST && '애널리스트' || '' }} · 시세 복구 ${{ steps.price_repair.outcome || '-' }} — 로그: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true

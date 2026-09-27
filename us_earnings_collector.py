@@ -91,10 +91,9 @@ def extract_rows(cik, d):
             continue
         it = items[i] or ""
         is_earn = 1 if (f.startswith("8-K") and "2.02" in it) else 0
-        # 무게 관리: 8-K 는 실적공표(2.02)만 저장 — 그 외 8-K(M&A·기타)는 행수만
-        # 불리고 PEAD 목적엔 불필요. (본보고서 10-K/Q 등은 전부 보존)
-        if f.startswith("8-K") and not is_earn:
-            continue
+        # v20 2026-09-27: 8-K 전 항목 저장 — 이전엔 실적공표(2.02)만 남기고 나머지(1.01 주요계약·2.01 인수합병·5.02 경영진
+        #   교체·8.01 기타(자사주 등)·3.01 상폐통지 …)를 버렸다. 가격과 직교한 이벤트 재료라 연구용으로 남긴다.
+        #   accepted(접수 시각)가 있어 소급 PIT 성립. 실적 연구는 계속 is_earnings=1 로 거른다(research/ 3곳 확인).
         rows.append((cik, accn[i], f, filed[i], accepted[i] or "", it,
                      report[i] or "", is_earn))
     return rows
@@ -217,12 +216,12 @@ def self_test():
         ok &= cond
 
     rows = extract_rows(320193, FIXTURE_RECENT)
-    check("Form 4·filed<2019·비실적 8-K 제외 → 2행", len(rows) == 2)
+    check("Form 4·filed<2019 제외, 비실적 8-K 는 v20 부터 저장 → 3행", len(rows) == 3)
     earn = [r for r in rows if r[7] == 1]
     check("실적공표 판별: 8-K+Item2.02 만 1건", len(earn) == 1 and earn[0][1] == "a-1")
     check("접수시각(장후 21:30 UTC) 보존", earn[0][4].startswith("2026-01-30T21:30"))
-    check("비실적 8-K(Item 8.01)는 저장 안 함(무게 관리)",
-          not any(r[1] == "a-2" for r in rows))
+    check("비실적 8-K(Item 8.01)도 저장(v20) — is_earnings=0",
+          any(r[1] == "a-2" and r[7] == 0 for r in rows))
     rows2 = extract_rows(320193, FIXTURE_PAGED)
     check("페이지 파일 형태 파싱(10-K 1행)", len(rows2) == 1 and rows2[0][2] == "10-K")
 
@@ -233,7 +232,7 @@ def self_test():
     con.executemany("INSERT OR IGNORE INTO earnings_events VALUES (?,?,?,?,?,?,?,?)", allr)
     con.executemany("INSERT OR IGNORE INTO earnings_events VALUES (?,?,?,?,?,?,?,?)", allr)
     n = con.execute("SELECT COUNT(*) FROM earnings_events").fetchone()[0]
-    check("idempotent: 2회 적재 후에도 3행", n == 3)
+    check("idempotent: 2회 적재 후에도 4행(v20 비실적 8-K 포함)", n == 4)
     print("✅ self-test 통과" if ok else "❌ self-test 실패")
     sys.exit(0 if ok else 1)
 

@@ -8,7 +8,7 @@ import datetime as dt
 import sqlite3
 import time
 
-from us_calendar import STRAY_FRAC, baseline, date_counts, index_dates_for   # v18: 공용 정의(이 모듈 경로로도 계속 import 가능)
+from us_calendar import STRAY_FRAC, baseline, date_counts, index_dates_for, missing_sessions   # v18: 공용 정의(이 모듈 경로로도 계속 import 가능)
 
 MIN_COVERAGE = .9
 AUDIT_DAYS = 20
@@ -18,12 +18,16 @@ AUDIT_DAYS = 20
 RESIDUAL_WARN_FRAC = .01
 
 
-def gaps(con, counts=None):
+def gaps(con, counts=None, index_dates=None):
     counts = counts if counts is not None else date_counts(con)
-    # Observed weekdays only: holidays/zero-row sessions require a calendar review.
-    return [(d, counts[d], baseline(counts, d)) for d in sorted(counts)[-AUDIT_DAYS:]
-            if dt.datetime.strptime(d, '%Y%m%d').weekday() < 5
-            and counts[d] < MIN_COVERAGE * baseline(counts, d)]
+    recent = sorted(counts)[-AUDIT_DAYS:]
+    out = [(d, counts[d], baseline(counts, d)) for d in recent
+           if dt.datetime.strptime(d, '%Y%m%d').weekday() < 5
+           and counts[d] < MIN_COVERAGE * baseline(counts, d)]
+    # v21: 지수 봉은 있는데 시세 0행인 세션(전면 수집 실패) — 행이 없어 위 목록에 안 잡히던 것(Codex 검토 1)
+    if recent:
+        out += [(d, 0, baseline(counts, d)) for d in missing_sessions(counts, index_dates) if d >= recent[0]]
+    return sorted(out)
 
 
 def anchors(con, day, counts=None):
@@ -125,12 +129,14 @@ def main():
         else:
             counts = date_counts(con)
         idx = index_dates_for(OHLCV_DB)
-        for day, have, expected in gaps(con, counts):
-            # v18: 휴장일 잔행은 경고 대신 안내. v19: 지수(SPX) 봉 기간 안이면 '지수 봉 없음'으로만 잔행 판정 —
-            #   6% 짜리 실제 부분 수집일(20260922, 09-23 시점)을 '조치 불필요'로 격하하던 문제
-            holiday = (day not in idx) if idx and min(idx) <= day <= max(idx) else have < STRAY_FRAC * expected
+        for day, have, expected in gaps(con, counts, idx):
+            # v18: 휴장일 잔행은 경고 대신 안내. v21: 지수 봉이 있는 날은 잔행으로 격하하지 않는다(행수가 적어도 부분 수집),
+            #   지수 봉이 없어도 행수가 정상이면 잔행이 아니다(지수 수집 누락 — Codex 검토 3)
+            holiday = not (idx and day in idx) and have < STRAY_FRAC * expected
             if holiday:
                 print(f'::notice::시세 점검 {day}: {have}행 — 휴장일 잔행 추정(조치 불필요)')
+            elif have == 0:
+                print(f'::warning::시세 점검 {day}: 시세 0행(지수 봉은 있음) — 전면 수집 실패. price_repair_dates={day} 로 복구')
             else:
                 print(f'::warning::시세 점검 {day}: {have}/{expected} ({have/expected:.1%}) — 부분 수집 의심')
 

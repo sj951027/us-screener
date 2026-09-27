@@ -4,6 +4,7 @@
 import contextlib
 import io
 import json
+import os
 import pathlib
 import sqlite3
 import subprocess
@@ -106,6 +107,8 @@ class ReviewFixes(unittest.TestCase):
             out.parent.mkdir(parents=True)
             env = {"GITHUB_ACTIONS": "true"} if extra_env else {}
             with patch.dict("os.environ", env), patch.object(page, "OHLCV_DB", db), patch.object(page, "OUT", out),                     patch.object(page, "HERE", root), patch.object(page, "HISTORY_OUT", root / "docs/data/us_history.json"),                     patch.object(page, "index_dates_for", return_value=set(dates)), contextlib.redirect_stdout(io.StringIO()) as log:
+                if not extra_env:
+                    os.environ.pop("GITHUB_ACTIONS", None)   # CI 러너엔 이미 설정돼 있음 — 로컬 실행 재현(patch.dict 가 종료 시 복원)
                 page.main()
             c = sqlite3.connect(db)
             after = c.execute("SELECT COUNT(*) FROM score_daily").fetchone()[0]

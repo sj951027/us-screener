@@ -250,6 +250,9 @@ def load_quarter(con, session, quarter):
     if rows is None:
         print(f"  ⚠️ {quarter}: {err} — 건너뜀(다음 세션에서 매핑)")
         return 0
+    if not rows:   # v14: 0행은 파싱 실패로 본다 — 기존 분기를 지우고 '완료'로 박제하면 영구 유실(재시도 없음)
+        print(f"  ⚠️ {quarter}: 파싱 0행 — 기존 데이터 유지·완료 표기 안 함(다음 실행 재시도)")
+        return 0
     con.execute("DELETE FROM insider_tx WHERE quarter=?", (quarter,))   # idempotent
     con.executemany("INSERT INTO insider_tx VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     con.execute("INSERT OR REPLACE INTO insider_files_done VALUES (?,?,?)",

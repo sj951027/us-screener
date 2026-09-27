@@ -138,11 +138,13 @@ def load_ticker_map(con, session):
 
 def run_bulk(con, force=False):
     import requests
-    last = con.execute("SELECT value FROM xbrl_meta WHERE key='last_success'").fetchone()
-    if last and not force:
+    # v14: 성공일과 '시도일' 중 늦은 쪽으로 가드 — 0개 파싱 실패가 매일 1.3GB 재다운로드로 번지지 않게(주 1회 재시도)
+    last = con.execute(
+        "SELECT MAX(value) FROM xbrl_meta WHERE key IN ('last_success', 'last_attempt')").fetchone()
+    if last and last[0] and not force:
         gap = (dt.date.today() - dt.date.fromisoformat(last[0])).days
         if gap < GUARD_DAYS:
-            print(f"⏭  XBRL 스킵 — 마지막 성공 {last[0]} 이후 {gap}일 < {GUARD_DAYS}일 (주간 가드)")
+            print(f"⏭  XBRL 스킵 — 마지막 성공/시도 {last[0]} 이후 {gap}일 < {GUARD_DAYS}일 (주간 가드)")
             return
     s = requests.Session()
     ciks = load_ticker_map(con, s)
@@ -194,8 +196,13 @@ def _parse_zip(con, tmp, ciks):
     con.commit()
     total = con.execute("SELECT COUNT(*) FROM xbrl_facts").fetchone()[0]
     n_cik = con.execute("SELECT COUNT(DISTINCT cik) FROM xbrl_facts").fetchone()[0]
-    con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('last_success', ?)",
-                (dt.date.today().isoformat(),))
+    today = dt.date.today().isoformat()
+    con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('last_attempt', ?)", (today,))
+    if n_parsed == 0:   # v14: 0개 파싱은 성공이 아니다 — last_success 는 두고 시도일만 남겨 다음 주 재시도, ✅ 문구 생략
+        con.commit()
+        print(f"❌ XBRL 파싱 0개 — last_success 미갱신(누적 {total:,}행 그대로). zip 내부 경로·형식 변경 의심, 다음 주 재시도")
+        return
+    con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('last_success', ?)", (today,))
     con.commit()
     print(f"💾 xbrl_facts 누적 {total:,}행 · {n_cik:,}개 회사 (파싱 {n_parsed:,}개)")
     print("✅ XBRL 벌크 적재 완료 — 관측 전용(점수 미투입). PIT 조회는 filed ≤ 기준일.")

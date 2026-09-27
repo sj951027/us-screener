@@ -130,14 +130,17 @@ def main():
              if d.strftime("%Y%m%d") not in done]
     print(f"[탐침] {start}~{today} 후보 {len(cands)}일 (이미 확보 {len(done)}파일)")
     got = 0
+    codes = {}   # v14: 상태코드 집계 — 404 는 미게시(정상), 403/5xx 연속이면 차단 의심(us_shortvol 과 동일 방식)
     for d in cands:
         ds = d.strftime("%Y%m%d")
         try:
             r = requests.get(URL.format(d=ds), headers=UA, timeout=30)
         except Exception as e:
             print(f"  ⚠️ {ds} 요청 실패(다음 실행 재시도): {e}")
+            codes["exc"] = codes.get("exc", 0) + 1
             time.sleep(3)
             continue
+        codes[r.status_code] = codes.get(r.status_code, 0) + 1
         if r.status_code != 200 or len(r.content) < 5000:
             time.sleep(0.3)
             continue
@@ -147,6 +150,10 @@ def main():
             RAW_DIR.mkdir(parents=True, exist_ok=True)
             (RAW_DIR / f"shrt{ds}.csv").write_bytes(r.content)
             print(f"  ⚠️ {ds} 포맷 감지 실패 — raw_finra/ 에 원본 보존(매핑은 수동 확인)")
+            continue
+        if not rows:   # v14: 0행을 '완료'로 기록하면 그 결제일은 영구 스킵 — 다음 실행에 다시 맡긴다
+            print(f"  ⚠️ {ds} 파싱 0행 — 완료 표기 안 함(다음 실행 재시도)")
+            time.sleep(1.0)
             continue
         cur = con.executemany(
             "INSERT OR IGNORE INTO short_interest VALUES (?,?,?,?,?,?)", rows)
@@ -159,7 +166,10 @@ def main():
     n, nd = con.execute(
         "SELECT COUNT(*), COUNT(DISTINCT settlement_date) FROM short_interest").fetchone()
     con.close()
-    print(f"완료: 신규 {got}파일. 누적 {n:,}행 · {nd}개 결제일.")
+    print(f"완료: 신규 {got}파일 · 응답 {codes}. 누적 {n:,}행 · {nd}개 결제일.")
+    bad = sum(v for k, v in codes.items() if k == "exc" or (isinstance(k, int) and (k == 403 or k >= 500)))
+    if cands and got == 0 and bad == len(cands):
+        print(f"  ❌ 후보 {len(cands)}일 전부 실패({codes}) — 차단/UA 의심. 텔레그램 건강줄 '공매도' 최신일이 멈추면 이 줄 확인")
 
 
 if __name__ == "__main__":

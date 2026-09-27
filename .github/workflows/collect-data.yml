@@ -68,6 +68,11 @@ jobs:
             tar xzf us-data.tar.gz || { echo "❌ us-data.tar.gz 손상 — 중단(빈 재시작 방지). us-data-weekly.tar.gz 로 복구 필요"; exit 1; }
             cp us-data.tar.gz us-data-prev.tar.gz     # 주간 백업은 '직전 일일본'으로(오늘 run 이 오염돼도 백업은 무사)
             echo "PREV_TAR_BYTES=$(stat -c%s us-data.tar.gz)" >> "$GITHUB_ENV"
+          elif echo "$names" | grep -qx 'us-data-weekly.tar.gz'; then
+            # v14: 일일 정본만 없고 주간 백업은 있음 = 자산 소실(업로드 중 취소·타임아웃 등). '새로 시작'으로 오인하면
+            #   PREV_TAR_BYTES 가 비어 50% 가드가 꺼진 채 며칠치 tar 가 --clobber 로 정본 자리를 차지한다.
+            echo "❌ us-data.tar.gz 만 없고 us-data-weekly.tar.gz 는 있음 — 자산 소실로 판단, 빈 재시작 중단."
+            echo "   복구: 주간 백업을 내려받아 us-data.tar.gz 이름으로 release 에 다시 올린 뒤 재실행"; exit 1
           else
             echo "자산 없음(릴리스만 존재) — 새로 시작"
           fi
@@ -112,13 +117,20 @@ jobs:
           # 3차: Form 4 내부자(분기 구조화셋, 회당 4분기 점진 백필 — ~1주에 걸쳐 완성)
           python us_insider_collector.py
 
+      # v13 2026-09-27: 복구 실패가 '오늘 수집분 폐기'로 번지지 않게 한다(실측 러너 #36290533184:
+      #   9/22 는 이미 6,564/6,566 까지 찼는데 잔여 2종목 때문에 업로드까지 중단됐다).
+      #   실패해도 점수·업로드는 진행하고, 업로드 뒤 전용 스텝에서 실행을 실패로 표시한다.
       - name: Repair missing prices and audit history
+        id: price_repair
+        continue-on-error: true
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
           PRICE_REPAIR_DATES: ${{ github.event.inputs.price_repair_dates }}
         run: |
-          if [ -n "$PRICE_REPAIR_DATES" ]; then python us_price_repair.py --dates "$PRICE_REPAIR_DATES"; fi
-          python us_price_repair.py --audit
+          rc=0
+          if [ -n "$PRICE_REPAIR_DATES" ]; then python us_price_repair.py --dates "$PRICE_REPAIR_DATES" || rc=$?; fi
+          python us_price_repair.py --audit || true    # 읽기 전용 점검 — 복구가 실패해도 찍는다
+          exit "$rc"
 
       - name: Build page data (docs/data/us_latest.csv)
         env:
@@ -192,6 +204,13 @@ jobs:
             gh release upload data-store us-data-weekly.tar.gz --clobber
             echo "주간 백업본 갱신(금요일, 직전 일일본)"
           fi
+
+      # v13: 업로드까지 끝낸 뒤에 복구 실패를 실행 결과로 남긴다(빨간 실패 + 아래 텔레그램 알림 유지).
+      - name: Repair result gate
+        if: steps.price_repair.outcome == 'failure'
+        run: |
+          echo "❌ 시세 복구 미완료 — 오늘 수집분은 정본에 반영됨. 로그의 '[시세 복구]' 줄에서 잔여 종목 확인"
+          exit 1
 
       - name: Failure alert (실패 시 텔레그램 한 줄)
         if: failure()

@@ -1,0 +1,76 @@
+{
+  "latest_price": "20260924",
+  "last_mature_20d_date": "20260826",
+  "old_last_anchor": "20260730",
+  "n_new_anchors": 3,
+  "post_definition_anchors": 0,
+  "recent_date_counts": {
+    "20260820": 6573,
+    "20260821": 6574,
+    "20260824": 6578,
+    "20260825": 6578,
+    "20260826": 6581,
+    "20260827": 6581,
+    "20260828": 6576,
+    "20260831": 6579,
+    "20260901": 6576,
+    "20260902": 6578,
+    "20260903": 6576,
+    "20260904": 6574,
+    "20260908": 6574,
+    "20260909": 6573,
+    "20260910": 6576,
+    "20260911": 6570,
+    "20260914": 6568,
+    "20260915": 6570,
+    "20260916": 6575,
+    "20260917": 6571,
+    "20260918": 6567,
+    "20260921": 6567,
+    "20260922": 843,
+    "20260923": 6564,
+    "20260924": 6566
+  },
+  "comparisons": {
+    "mus50": {
+      "mean_return_pct": -0.016169102201303964,
+      "mean_excess_ew_pp": 2.749832147069059,
+      "mean_delta_mus_pp": 0.0,
+      "n": 3,
+      "ci95": null,
+      "ci_reason": "Too few overlapping weekly anchors for reliable interval",
+      "missing_outcomes": 8
+    },
+    "val50": {
+      "mean_return_pct": -2.096148783784554,
+      "mean_excess_ew_pp": 0.6698524654858092,
+      "mean_delta_mus_pp": -2.07997968158325,
+      "n": 3,
+      "ci95": null,
+      "ci_reason": "Too few overlapping weekly anchors for reliable interval",
+      "missing_outcomes": 0
+    },
+    "vm_inter": {
+      "mean_return_pct": -1.6831117486481464,
+      "mean_excess_ew_pp": 1.082889500622217,
+      "mean_delta_mus_pp": -1.6669426464468424,
+      "n": 3,
+      "ci95": null,
+      "ci_reason": "Too few overlapping weekly anchors for reliable interval",
+      "missing_outcomes": 2
+    },
+    "vm_sum6": {
+      "mean_return_pct": -3.295932492930826,
+      "mean_excess_ew_pp": -0.529931243660463,
+      "mean_delta_mus_pp": -3.2797633907295225,
+      "n": 3,
+      "ci95": null,
+      "ci_reason": "Too few overlapping weekly anchors for reliable interval",
+      "missing_outcomes": 2
+    }
+  },
+  "verdict": "NOT_VALIDATED: insufficient sample and missing outcomes",
+  "partial_price_dates": [
+    "20260922"
+  ]
+}

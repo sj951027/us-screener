@@ -54,6 +54,7 @@ COMPLETENESS_MIN = 0.9  # 당일 시세 심볼 수 / 전일 — 이 아래면 �
 STRAY_FRAC = 0.1        # v09: 심볼 수가 최근 STRAY_WINDOW 거래일 최대의 이 비율 미만인 날짜 = 잔행(휴장일 1~2행) → 거래일 제외
 STRAY_WINDOW = 20       # v09: 잔행 판정 기준 최대값을 구하는 직전 거래일 수
 CATCHUP_DAYS = 10       # v09: 최신일 앞 이 거래일 범위에서 score_daily 공백일을 자동 보충
+GUARD_PASS_FRAC = 0.5   # v15: 가드 통과 유니버스 ≈ 시세 심볼의 절반(실측 3,36x/6,56x = 51%) — 부분 적재 의심 판정의 기준
 
 
 def finra_key(sym):
@@ -243,6 +244,15 @@ def main(asof=None, repair=False, catchup=False):
         print(f"(--asof {ds[i]}: score_daily 미적재 — --repair 로만 씀)")
         wcon.close()
         return
+    if not repair:
+        # v15: 같은 날짜를 두 번 계산하면(다음 세션 미수집으로 최신일이 이틀 연속 같을 때) INSERT OR IGNORE 가 새 종목만
+        #   덧붙여 두 계산의 순위가 섞인다(실측 20260921: rank 중복 52 · 최대 rank 3,373 < 3,385행). 이미 있으면 손대지 않는다.
+        n_have = wcon.execute("SELECT COUNT(*) FROM score_daily WHERE model=? AND date=?",
+                              (MODEL_ID, ds[i])).fetchone()[0]
+        if n_have:
+            print(f"score_daily {ds[i]}: 이미 {n_have:,}행 적재 — 재적재 생략(재계산은 --repair). 틸트 적재도 생략")
+            wcon.close()
+            return
     cur = wcon.executemany(
         "INSERT OR IGNORE INTO score_daily VALUES (?,?,?,?,?,?,?,?)", rows_sd)
     wcon.commit()
@@ -356,8 +366,8 @@ def pending_catchup():
         k = dates.index(d)
         ratio = completeness(counts, d, dates[k - 1] if k > 0 else None)[2]
         if d in scored:
-            # 가드 통과 유니버스는 시세 심볼의 절반쯤(실측 3,36x/6,56x)이 정상 — 그 90% 미만이면 부분 적재 의심
-            if ratio >= COMPLETENESS_MIN and scored[d] < COMPLETENESS_MIN * 0.5 * counts[d]:
+            # 가드 통과 유니버스(GUARD_PASS_FRAC)의 90% 미만이면 부분 적재 의심
+            if ratio >= COMPLETENESS_MIN and scored[d] < COMPLETENESS_MIN * GUARD_PASS_FRAC * counts[d]:
                 thin.append(f"{d}({scored[d]:,})")
         elif ratio >= COMPLETENESS_MIN:
             todo.append(d)

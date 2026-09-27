@@ -112,8 +112,8 @@ def ensure_db():
 def run_bulk(con, force=False):
     import requests
     last = con.execute(
-        "SELECT value FROM xbrl_meta WHERE key='earnings_last_success'").fetchone()
-    if last and not force:
+        "SELECT MAX(value) FROM xbrl_meta WHERE key IN ('earnings_last_success', 'earnings_last_attempt')").fetchone()
+    if last and last[0] and not force:   # v14: 성공/시도 중 늦은 쪽(0개 파싱이 매일 1.3GB 재다운로드로 번지지 않게)
         gap = (dt.date.today() - dt.date.fromisoformat(last[0])).days
         if gap < GUARD_DAYS:
             print(f"⏭  실적일 스킵 — 마지막 성공 {last[0]} 이후 {gap}일 < {GUARD_DAYS}일 (주간 가드)")
@@ -173,8 +173,13 @@ def _parse_zip(con, tmp, ciks):
     tmp.unlink(missing_ok=True)
     tot, earn = con.execute(
         "SELECT COUNT(*), SUM(is_earnings) FROM earnings_events").fetchone()
-    con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('earnings_last_success', ?)",
-                (dt.date.today().isoformat(),))
+    today = dt.date.today().isoformat()
+    con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('earnings_last_attempt', ?)", (today,))
+    if n_parsed == 0:   # v14: 0개 파싱은 성공이 아니다(xbrl 과 동일) — 시도일만 남겨 주 1회 재시도, ✅ 문구 생략
+        con.commit()
+        print(f"❌ 실적일 파싱 0개 — earnings_last_success 미갱신(누적 {tot:,}행 그대로). zip 형식 변경 의심, 다음 주 재시도")
+        return
+    con.execute("INSERT OR REPLACE INTO xbrl_meta VALUES ('earnings_last_success', ?)", (today,))
     con.commit()
     print(f"💾 earnings_events 누적 {tot:,}행 · 실적공표(8-K 2.02) {earn:,}건")
     print("✅ 실적일 적재 완료 — 관측 전용. 이벤트 정렬은 accepted(접수시각)로 장전/장후 구분.")

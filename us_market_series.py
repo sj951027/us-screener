@@ -38,8 +38,11 @@ def _fetch_one(yf, con, name, code):
     """한 시리즈 수집·적재. 성공=신규 행수, 실패/빈 결과=None (비치명)."""
     last = con.execute(
         "SELECT MAX(date) FROM market_daily WHERE series=?", (name,)).fetchone()[0]
-    kw = {"period": "14d"} if last else \
-         {"start": (dt.date.today() - dt.timedelta(days=365 * 3)).isoformat()}
+    # v15: 창을 '마지막 저장일 − 7일'부터로 — 14일 고정이면 15일 이상 중단 시 영구 구멍(us_ohlcv 증분과 같은 자가치유)
+    if last:
+        kw = {"start": (dt.date(int(last[:4]), int(last[4:6]), int(last[6:])) - dt.timedelta(days=7)).isoformat()}
+    else:
+        kw = {"start": (dt.date.today() - dt.timedelta(days=365 * 3)).isoformat()}
     try:
         df = yf.download(code, interval="1d", auto_adjust=False,
                          progress=False, **kw)

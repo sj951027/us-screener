@@ -18,6 +18,8 @@ import os
 import sqlite3
 import sys
 import time
+
+from us_seed_collector import et_today   # v15: 스냅샷 날짜를 ET 세션 기준으로(러너 UTC 날짜는 v11 이후 하루 앞섬)
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -72,7 +74,7 @@ def main():
     pos_row = con.execute("SELECT v FROM rotate_state WHERE k='pos'").fetchone()
     pos = pos_row[0] % len(symbols) if pos_row else 0
     batch = [symbols[(pos + i) % len(symbols)] for i in range(min(args.batch, len(symbols)))]
-    today = dt.date.today().strftime("%Y%m%d")
+    today = et_today()   # v15: ET 세션 날짜(ET 06시 이전은 전날). 2026-09-17~26 행은 러너 UTC 날짜라 +1일 라벨(패치노트 v15)
     print(f"[순환] 위치 {pos}/{len(symbols)} 부터 {len(batch)}종목 "
           f"(전체 한 바퀴 ≈ {len(symbols)//args.batch + 1}일)")
 
@@ -115,8 +117,13 @@ def main():
     if sec_rows:
         con.executemany(
             "INSERT OR REPLACE INTO sector_cache VALUES (?,?,?,?)", sec_rows)
-    con.execute("INSERT OR REPLACE INTO rotate_state VALUES ('pos', ?)",
-                ((pos + len(batch)) % len(symbols),))
+    if batch and ok == 0:   # v15: 전부 실패(레이트리밋 등)면 위치를 옮기지 않는다 — 스냅샷은 소급 불가라 그 구간이 한 바퀴 빈다
+        print(f"⚠️ 배치 {len(batch)}종목 전부 실패 — 순환 위치 {pos} 유지(다음 실행 같은 구간 재시도)")
+    else:
+        con.execute("INSERT OR REPLACE INTO rotate_state VALUES ('pos', ?)",
+                    ((pos + len(batch)) % len(symbols),))
+        if fail > ok:
+            print(f"⚠️ 실패 {fail} > 성공 {ok} — 이 구간 시총 결손 큼(다음 바퀴 재시도)")
     con.commit()
     n, nd = con.execute(
         "SELECT COUNT(*), COUNT(DISTINCT symbol) FROM valuation_rotate").fetchone()

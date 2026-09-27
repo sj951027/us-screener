@@ -82,6 +82,7 @@ BACKFILL_YEARS = 3
 CHUNK = 50            # yf.download 배치 크기 (보수적 — rate limit 대비)
 SLEEP_BETWEEN = 1.0   # 배치 간 대기(초)
 REPAIR_CAP = 200      # 회당 재조정(전체 재수집) 심볼 상한 — 남은 건 다음 실행이 처리
+DIV_RESERVE = 50      # v15: 회당 배당 재조정 최소 슬롯(상한의 1/4) — 절벽이 상한을 독점해 배당 1,304건이 3주간 시도 0(실측 09-27)
 GIVE_UP_ATTEMPTS = 6  # v08: 재조정 시도 상한(배치 예외도 세므로 3→6)
 LOW_YIELD_FRAC = 0.9  # v10: 최신일 수집 심볼 / 대상 — 이 미만이면 ⚠️ + 사유 집계 상세 출력(page_data 게이트와 같은 기준)
 STRAY_FRAC = 0.1      # 심볼 수가 최근 최대의 이 비율 미만인 날짜 = 잔행(휴장일에 흘린 1~2행) → 거래일로 안 침
@@ -366,14 +367,28 @@ def _queue_fail(con, sym, reason, detail, max_attempts=GIVE_UP_ATTEMPTS):
         print(f"  [포기] {sym} — {max_attempts}회 실패(상폐 추정), 원본 유지")
 
 
+def select_queue(con, cap=REPAIR_CAP, reserve=DIV_RESERVE):
+    """이번 실행에 처리할 큐 항목. v08: 분할 > 절벽(50% 오염) > 배당(~1% 드리프트) — 배당이 절벽을 굶기지 않게.
+    v15: 반대로 절벽이 배당을 굶겼다(실측 09-27: 절벽 245건이 상한 200을 매번 차지, 배당 1,304건 시도 0회 3주).
+    배당에 reserve 슬롯을 남기고, 배당이 모자라면 남은 슬롯은 다시 절벽으로 채운다. attempts 는 _queue_fail 이 관리."""
+    def pick(where, limit, offset=0):
+        if limit <= 0:
+            return []
+        return con.execute(
+            "SELECT symbol, reason, detail FROM adjust_queue WHERE " + where +
+            " ORDER BY CASE reason WHEN 'split' THEN 0 WHEN 'cliff' THEN 1 ELSE 2 END, queued_at "
+            "LIMIT ? OFFSET ?", (limit, offset)).fetchall()
+    head = pick("reason != 'div'", cap - min(reserve, cap))
+    tail = pick("reason = 'div'", cap - len(head))
+    if len(head) + len(tail) < cap:
+        head += pick("reason != 'div'", cap - len(head) - len(tail), offset=len(head))
+    return head + tail
+
+
 def process_queue(con, cap=REPAIR_CAP):
     """adjust_queue 심볼의 전체 3년 이력 재수집(REPLACE). 성공 시 큐에서 제거,
     reason='cliff' 는 cliff_checked 에 기록. 실패는 큐에 남아 다음 실행이 재시도."""
-    todo = con.execute(
-        "SELECT symbol, reason, detail FROM adjust_queue "
-        "ORDER BY CASE reason WHEN 'split' THEN 0 WHEN 'cliff' THEN 1 ELSE 2 END, queued_at "
-        "LIMIT ?",   # v08: 분할 > 절벽(50% 오염) > 배당(~1% 드리프트) — 배당이 절벽을 굶기지 않게
-        (cap,)).fetchall()  # attempts 는 _queue_fail 이 관리
+    todo = select_queue(con, cap)
     if not todo:
         return 0
     n_left = con.execute("SELECT COUNT(*) FROM adjust_queue").fetchone()[0]
@@ -509,6 +524,22 @@ def self_test():
     order = [r[0] for r in con.execute(
         "SELECT reason FROM adjust_queue ORDER BY CASE reason WHEN 'split' THEN 0 WHEN 'cliff' THEN 1 ELSE 2 END, queued_at")]
     check("queue: 처리 순서 split → cliff → div", order == sorted(order, key=lambda r: REASON_PRI[r]))
+    # v15 배당 최소 슬롯: 절벽 250 + 배당 100 → 200 중 배당 50 · 절벽만 있으면 200 전부 절벽 · 배당만 있으면 200 전부 배당
+    c2 = sqlite3.connect(":memory:")
+    for d in DDL:
+        c2.execute(d)
+    c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,0)",
+                   [(f"C{i}", "cliff", "", "t") for i in range(250)] + [(f"D{i}", "div", "", "t") for i in range(100)])
+    sel = select_queue(c2, cap=200, reserve=50)
+    check("queue: 절벽 250+배당 100 → 200개 중 배당 50", len(sel) == 200 and sum(r[1] == "div" for r in sel) == 50)
+    c2.execute("DELETE FROM adjust_queue WHERE reason='div'")
+    sel = select_queue(c2, cap=200, reserve=50)
+    check("queue: 배당 없으면 절벽으로 200 채움", len(sel) == 200 and all(r[1] == "cliff" for r in sel))
+    c2.execute("DELETE FROM adjust_queue")
+    c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,0)", [(f"D{i}", "div", "", "t") for i in range(300)])
+    sel = select_queue(c2, cap=200, reserve=50)
+    check("queue: 배당만 있으면 200 전부 배당", len(sel) == 200 and all(r[1] == "div" for r in sel))
+    c2.close()
     # 실패 GIVE_UP_ATTEMPTS 회 → 포기(큐 제거 + checked 표기, 다중 절벽 detail 전부)
     con.execute("UPDATE adjust_queue SET reason='cliff', detail='20260811,20260812' WHERE symbol='MNSX'")
     for _ in range(GIVE_UP_ATTEMPTS):

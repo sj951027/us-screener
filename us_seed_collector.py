@@ -37,7 +37,8 @@ MIN_ROWS_PER_FILE = 1000   # v08: nasdaqlisted ~5천·otherlisted ~7천 — 이�
 NASDAQ_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt"
 OTHER_URL = "https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt"
 WIKI = {"SP500": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
-        "NDX100": "https://en.wikipedia.org/wiki/Nasdaq-100"}
+        # v15: 구성종목 표가 별도 문서로 이동(실측 09-27: Nasdaq-100 문서에는 표 18개 중 종목표 없음 → 40일+ 0행)
+        "NDX100": "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies"}
 
 DDL = [
     """CREATE TABLE IF NOT EXISTS listing_daily (

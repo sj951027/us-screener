@@ -1,0 +1,40 @@
+# 오프라인 테스트 — 코드가 바뀌어 푸시될 때만 돈다(네트워크·데이터 0). v19 2026-09-27.
+# 수집 워크플로(collect-data.yml)와 분리: 테스트가 실패해도 정기 수집·정본 업로드를 막지 않는다.
+# 여기서 잡히는 것 = 수집기 파서·큐·게이트·날짜 규칙의 회귀. 러너에서만 드러나는 결함(야후 응답 변화 등)은
+# collect-data 의 무결성 게이트(us_integrity.py)와 텔레그램 점검 줄이 맡는다.
+name: tests
+
+on:
+  push:
+    paths:
+      - 'us_*.py'
+      - 'research/test_*.py'
+      - 'requirements.txt'
+      - '.github/workflows/tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Self-tests (각 모듈 --self-test)
+        run: |
+          set -e
+          for m in us_ohlcv_collector us_options_collector us_shortvol_collector us_xbrl_collector \
+                   us_earnings_collector us_insider_collector us_integrity; do
+            echo "::group::$m"; python "$m.py" --self-test; echo "::endgroup::"
+          done
+      - name: Unit tests (research/test_*.py)
+        run: |
+          set -e
+          for t in research/test_*.py; do echo "::group::$t"; python "$t"; echo "::endgroup::"; done

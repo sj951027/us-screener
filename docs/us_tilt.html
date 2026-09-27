@@ -56,18 +56,28 @@ fetch('data/us_tilt.csv?ts='+Date.now())
     const rows = lines.slice(1).map(l=>{ const v=l.split(','); const o={}; head.forEach((h,j)=>o[h]=v[j]); return o; });
     if(!rows.length) throw 0;
     const r0 = rows[0];
+    // v19: 결제일이 얼마나 오래됐나(격주 15일 주기 + 게시 지연 ~8일 → 정상이면 최대 ~23일, 30일 넘으면 경고)
+    const ymd = s => new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6));
+    const sAge = (r0.date && r0.settle) ? Math.round((ymd(r0.date)-ymd(r0.settle))/864e5) : 0;
     document.getElementById('chips').innerHTML =
       `<span class="chip">기준일 <b>${r0.date}</b></span>`+
-      `<span class="chip">공매도 결제일 ${r0.settle}</span>`+
+      `<span class="chip"${sAge>30?' style="color:#b45309"':''}>공매도 결제일 ${r0.settle} (${sAge}일 전${sAge>30?' ⚠️ 오래됨':''})</span>`+
       `<span class="chip">풀 ${r0.n_pool} (top50 중 dtc 보유)</span>`;
     const f=(x,d)=>{ const n=parseFloat(x); return isNaN(n)?'':n.toFixed(d); };
     document.getElementById('tb').innerHTML = rows.map(r=>
       `<tr><td>${r.rank}</td><td><b>${r.symbol}</b></td><td>${r.name||''}</td><td>${r.sector||''}</td>`+
       `<td>${r.mus_rank}</td><td>${f(r.rv63,3)}</td><td>${f(r.dtc,2)}</td>`+
       `<td>${f(r.ret_1w_pct,1)}</td><td>${f(r.ret_1m_pct,1)}</td><td>${f(r.close,2)}</td></tr>`).join('');
+    // v19: 본 표와 기준일이 다르면 경고 — 틸트 계산이 생략된 날(공매도 커버리지 부족)엔 옛 목록이 남는다
+    fetch('data/us_latest.csv?ts='+Date.now()).then(x=>x.ok?x.text():'').then(t=>{
+      const L=t.replace(/^\uFEFF/,'').split(/\r?\n/); if(L.length<2) return;
+      const h=L[0].split(','), v=L[1].split(','), k=h.indexOf('date');
+      if(k>=0 && v[k] && v[k]!==r0.date) document.getElementById('chips').insertAdjacentHTML('afterbegin',
+        `<span class="chip" style="color:#b45309"><b>⚠️ 틸트 기준일 ${r0.date} ≠ 본 표 ${v[k]} — 오늘 목록 아님</b></span>`);
+    }).catch(()=>{});
   })
   .catch(()=>{ document.getElementById('tb').innerHTML =
-    '<tr><td colspan="10" class="loading">데이터 없음 (data/us_tilt.csv) — 다음 Actions 실행 후 생성됩니다</td></tr>'; });
+    '<tr><td colspan="10" class="loading">데이터를 불러오지 못함 (data/us_tilt.csv) — Actions 최근 실행 확인</td></tr>'; });
 </script>
 </body>
 </html>

@@ -38,6 +38,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from us_calendar import baseline, index_dates_for, trading_dates   # v18: 거래일·완전성 분모 정의는 us_calendar 한 곳
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -51,8 +53,6 @@ LOOKBACK = 260  # mom12(252) + 여유
 MODEL_ID = "us_mus_v0"  # mom12 + upratio63 + size_amt 순위합 (2026-07-12 첫 배선)
 TILT_MODEL_ID = "us_rvdtc_a"
 COMPLETENESS_MIN = 0.9  # 당일 시세 심볼 수 / 전일 — 이 아래면 부분 수집으로 보고 적재 생략(v08)
-STRAY_FRAC = 0.1        # v09: 심볼 수가 최근 STRAY_WINDOW 거래일 최대의 이 비율 미만인 날짜 = 잔행(휴장일 1~2행) → 거래일 제외
-STRAY_WINDOW = 20       # v09: 잔행 판정 기준 최대값을 구하는 직전 거래일 수
 CATCHUP_DAYS = 10       # v09: 최신일 앞 이 거래일 범위에서 score_daily 공백일을 자동 보충
 GUARD_PASS_FRAC = 0.5   # v15: 가드 통과 유니버스 ≈ 시세 심볼의 절반(실측 3,36x/6,56x = 51%) — 부분 적재 의심 판정의 기준
 
@@ -63,24 +63,9 @@ def finra_key(sym):
     return sym.replace("-P", "PR").replace("-", "")
 
 
-def trading_dates(con):
-    """v09: (거래일 목록, {날짜: close 있는 심볼 수}). 심볼 수가 직전 STRAY_WINDOW 거래일 최대의 STRAY_FRAC 미만인
-    날짜는 잔행(휴장일에 야후가 흘린 1~2행 — 실측 20260907 CREG)으로 보고 제외한다. us_notify_test 와 동일 기준."""
-    counts = dict(con.execute(
-        "SELECT date, COUNT(*) FROM daily_ohlcv WHERE close IS NOT NULL GROUP BY date ORDER BY date"))
-    dates, recent = [], []
-    for d, n in counts.items():
-        if recent and n < STRAY_FRAC * max(recent):
-            continue
-        dates.append(d)
-        recent = (recent + [n])[-STRAY_WINDOW:]
-    return dates, counts
-
-
 def completeness(counts, d_today, d_prev):
     """(당일 심볼 수, 전일 심볼 수, 비율). 전일 없으면 비율 1. v09: trading_dates 의 counts 를 받음."""
     n_t = counts.get(d_today, 0)
-    from us_price_repair import baseline
     n_p = baseline(counts, d_today) if d_prev else 0
     return n_t, n_p, (n_t / n_p if n_p else 1.0)
 
@@ -91,7 +76,7 @@ def main(asof=None, repair=False, catchup=False):
         print(f"us_ohlcv.db 없음({OHLCV_DB}) — 생략(비치명).")
         return
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-    all_dates, counts = trading_dates(con)   # v09: 잔행 날짜 제외
+    all_dates, counts = trading_dates(con, index_dates=index_dates_for(OHLCV_DB))   # v09 잔행 제외 · v19 지수 봉 기준
     latest = all_dates[-1]
     if asof is None and not repair and not catchup:
         # v16: 최신 거래일이 이미 적재돼 있으면(새 세션 없음) CSV·점수·틸트를 통째로 다시 계산하지 않는다. v15 는 적재만 막아
@@ -113,7 +98,7 @@ def main(asof=None, repair=False, catchup=False):
     # ── v08 완전성 게이트 ───────────────────────────────────────────────
     n_t, n_p, ratio = completeness(counts, dates[-1], dates[-2] if len(dates) > 1 else None)
     if ratio < COMPLETENESS_MIN:
-        print(f"⚠️ 시세 부분 수집 의심: {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {ratio:.0%} < {COMPLETENESS_MIN:.0%} "
+        print(f"::warning::⚠️ 시세 부분 수집 의심: {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {ratio:.0%} < {COMPLETENESS_MIN:.0%} "
               + ("— 아직 시세가 채워지지 않아 REPAIR 거부(다음날 재시도)." if repair else
                  "— CSV·score_daily·틸트 적재 생략(반토막 유니버스 박제 방지). "
                  "다음 실행에서 시세가 채워지면 자동 보충(v09)."))
@@ -249,9 +234,11 @@ def main(asof=None, repair=False, catchup=False):
                         None if pd.isna(F.at[sym, "upratio63"]) else float(F.at[sym, "upratio63"]),
                         None if pd.isna(F.at[sym, "size_amt"]) else float(F.at[sym, "size_amt"])))
     if repair:
-        n_del = wcon.execute("DELETE FROM score_daily WHERE model IN (?,?) AND date=?",
-                             (MODEL_ID, TILT_MODEL_ID, ds[i])).rowcount
-        print(f"🛠 REPAIR {ds[i]}: score_daily 기존 {n_del}행 삭제 → 재적재 {len(rows_sd)}행 (감사 로그)")
+        # v18: 틸트(us_rvdtc_a)는 여기서 지우지 않는다 — 새 틸트가 계산될 때만 아래에서 교체(v08 은 먼저 지워서, 공매도
+        #   커버리지 부족 등으로 틸트 계산이 생략되면 그날 관측이 사라졌다. 소급 불가)
+        n_del = wcon.execute("DELETE FROM score_daily WHERE model=? AND date=?",
+                             (MODEL_ID, ds[i])).rowcount
+        print(f"🛠 REPAIR {ds[i]}: score_daily({MODEL_ID}) 기존 {n_del}행 삭제 → 재적재 {len(rows_sd)}행 (감사 로그)")
     elif asof and asof != latest and not catchup:
         print(f"(--asof {ds[i]}: score_daily 미적재 — --repair 로만 씀)")
         wcon.close()
@@ -342,6 +329,10 @@ def main(asof=None, repair=False, catchup=False):
                              index=False, encoding="utf-8-sig")
             # score_daily 관측 적재(별도 model id — 풀 50 순위 기록, 본구축 판정 매칭용)
             wc2 = sqlite3.connect(OHLCV_DB)
+            if repair:   # v18: 새 틸트가 있을 때만 교체
+                nd2 = wc2.execute("DELETE FROM score_daily WHERE model=? AND date=?",
+                                  (TILT_MODEL_ID, ds[i])).rowcount
+                print(f"🛠 REPAIR {ds[i]}: {TILT_MODEL_ID} 기존 {nd2}행 교체")
             recs2 = [(TILT_MODEL_ID, ds[i], s2, rk2, float(tilt.at[s2, "combo"]),
                       None, None, None) for rk2, s2 in enumerate(tilt.index, 1)]
             c2 = wc2.executemany(
@@ -356,6 +347,7 @@ def main(asof=None, repair=False, catchup=False):
             print("틸트 생략: 공매도 데이터 없음/커버리지 부족 (비치명)")
     except Exception as e:
         print(f"틸트 실패(비치명): {e}")
+    return True   # v19: 끝까지 계산·적재함 — --repair 결과 판정용(조기 반환은 None)
 
 
 def pending_catchup():
@@ -366,7 +358,7 @@ def pending_catchup():
     if not OHLCV_DB.exists():
         return []
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-    dates, counts = trading_dates(con)
+    dates, counts = trading_dates(con, index_dates=index_dates_for(OHLCV_DB))
     try:
         scored = dict(con.execute("SELECT date, COUNT(*) FROM score_daily WHERE model=? GROUP BY date", (MODEL_ID,)))
     except sqlite3.OperationalError:
@@ -386,7 +378,7 @@ def pending_catchup():
     if todo:
         print(f"↺ 자동 보충 대상 {len(todo)}일: {', '.join(todo)} (score_daily 공백 + 시세 완전성 충족)")
     if thin:
-        print(f"🛠 REPAIR 권고(부분 유니버스로 적재된 의심일 — 수동 repair_dates): {', '.join(thin)}")
+        print(f"::warning::🛠 REPAIR 권고(부분 유니버스로 적재된 의심일 — 수동 repair_dates): {', '.join(thin)}")
     return todo
 
 
@@ -397,8 +389,19 @@ if __name__ == "__main__":
     args = ap.parse_args()
     try:
         if args.repair:
+            # v19: 날짜별 결과를 모아 하나라도 재계산 못 했으면 exit 1(수동 경로 전용 — 워크플로가 업로드 뒤 판정).
+            #   이전엔 없는 날짜·완전성 미달·예외가 모두 로그 한 줄 뒤 녹색이었다.
+            failed = []
             for d_ in [x.strip() for x in args.repair.split(",") if x.strip()]:
-                main(asof=d_, repair=True)
+                try:
+                    if not main(asof=d_, repair=True):
+                        failed.append(d_)
+                except Exception as e:
+                    print(f"❌ REPAIR {d_} 예외: {e}")
+                    failed.append(d_)
+            if failed:
+                print(f"::error::REPAIR 미완료: {', '.join(failed)} — 로그의 '🛠 REPAIR'·'⚠️' 줄 확인")
+                sys.exit(1)
         elif args.asof:
             main(asof=args.asof)
         else:

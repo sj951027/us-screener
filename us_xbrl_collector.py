@@ -95,6 +95,10 @@ def extract_rows(cik, facts):
             for unit, items in units.items():
                 if unit not in UNITS:
                     continue
+                # v18: 기본키(cik,tag,unit,end,filed,form)에 기간 시작일이 없어 같은 10-Q 의 3개월치와 누적치가 충돌하고
+                #   JSON 에서 먼저 나온 쪽이 남았다(실측: 99.7% 누적 · 0.3% 3개월치 혼재). 같은 키 안에서는 가장 이른 start
+                #   (= 가장 긴 기간, 누적치)를 고른다 — 연구는 누적 차분을 쓴다. 기존 행은 IGNORE 라 그대로(새 적재분부터).
+                best = {}
                 for it in items:
                     end = it.get("end") or ""
                     form = it.get("form") or ""
@@ -108,7 +112,12 @@ def extract_rows(cik, facts):
                             continue
                     except ValueError:
                         continue
-                    rows.append((cik, tag, unit, end, float(val),
+                    key, start = (end, filed, form), it.get("start") or ""
+                    prev = best.get(key)
+                    if prev is None or (start and (not prev[0] or start < prev[0])):
+                        best[key] = (start, it)
+                for (end, filed, form), (_start, it) in best.items():
+                    rows.append((cik, tag, unit, end, float(it.get("val")),
                                  it.get("fy"), it.get("fp"), form, filed,
                                  it.get("accn")))
     return rows
@@ -256,6 +265,12 @@ def self_test():
           and {r[8] for r in ni} == {"2026-01-30", "2026-03-02"})
     check("비교재수록(filed>end+400일) 제외", not any(r[3] == "2023-12-30" for r in rows))
     check("EPS·주식수(dei) 포함 총 4행", len(rows) == 4)
+    dur = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [
+        {"start": "2026-01-01", "end": "2026-03-28", "val": 95.0, "fy": 2026, "fp": "Q2", "form": "10-Q", "filed": "2026-05-01", "accn": "q"},
+        {"start": "2025-09-28", "end": "2026-03-28", "val": 254.9, "fy": 2026, "fp": "Q2", "form": "10-Q", "filed": "2026-05-01", "accn": "q"},
+    ]}}}}}
+    r2 = [r for r in extract_rows(320193, dur) if r[1] == "Revenues"]
+    check("v18: 같은 공시의 3개월치(먼저)·누적치 → 누적치 1행", len(r2) == 1 and r2[0][4] == 254.9)
 
     con = sqlite3.connect(":memory:")
     for ddl in DDL:
@@ -280,7 +295,11 @@ def main():
     if args.self_test:
         self_test()
         return
-    con = ensure_db()
+    try:   # v19: DB 잠김·손상도 비치명 — try 밖이면 exit 1 로 'Run collectors' 스텝(뒤 수집기·점수·업로드)이 통째로 멈춘다
+        con = ensure_db()
+    except Exception as e:
+        print(f"⚠️  XBRL: us_fundamentals.db 열기 실패(비치명 — 다음 실행 재시도): {e}")
+        return
     try:
         run_bulk(con, force=args.force)
     except Exception as e:

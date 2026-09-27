@@ -18,7 +18,8 @@ mom12 + upratio63 + size(거래대금) 순위합의 당일 상위 종목을 텔�
 [v09 2026-09-11] 잔행 날짜(휴장일에 야후가 흘린 1~2행 — 실측 20260907 CREG) 를 거래일에서 제외(게이트
 분모·계산 창 모두, us_page_data 와 동일 기준). 부분 수집 메시지는 '다음 실행 자동 보충' 안내로 변경.
 """
-from us_price_repair import baseline
+from us_calendar import baseline, index_dates_for, trading_dates   # v18: us_page_data 와 같은 정의를 복제 대신 공유
+SHORT_STALE_DAYS = 30   # v19: 격주 공매도는 15일 주기 + 게시 지연 ~8일 — 정상이면 결제일이 시세보다 최대 ~23일 늦다
 import argparse
 import os
 import sqlite3
@@ -38,21 +39,8 @@ SEED_DB = DATA_DIR / "us_seed.db"
 TOP_N = 10
 LOOKBACK = 260   # mom12(252) + 여유
 COMPLETENESS_MIN = 0.9  # [v08] 완전성 게이트 기준(us_page_data 와 동일)
-STRAY_FRAC = 0.1        # [v09] 심볼 수가 최근 STRAY_WINDOW 거래일 최대의 이 비율 미만인 날짜 = 잔행 → 거래일 제외
-STRAY_WINDOW = 20
 
 
-def trading_dates(con):
-    """[v09] (거래일 목록, {날짜: close 있는 심볼 수}) — 잔행 날짜 제외. us_page_data.trading_dates 와 같은 기준."""
-    counts = dict(con.execute(
-        "SELECT date, COUNT(*) FROM daily_ohlcv WHERE close IS NOT NULL GROUP BY date ORDER BY date"))
-    dates, recent = [], []
-    for d, n in counts.items():
-        if recent and n < STRAY_FRAC * max(recent):
-            continue
-        dates.append(d)
-        recent = (recent + [n])[-STRAY_WINDOW:]
-    return dates, counts
 PAGE_URL = "https://sj951027.github.io/us-screener/us.html"  # 전체 표(GitHub Pages)
 TILT_URL = "https://sj951027.github.io/us-screener/us_tilt.html"  # 급등형 틸트(v 2026-07-18)
 
@@ -91,7 +79,15 @@ def db_health():
     parts.append(q("us_ohlcv.db", "SELECT COUNT(*) FROM daily_ohlcv", "시세"))
     try:  # [v08] 최신일 완전성 — 부분 수집(2026-09-02 실측 53%)을 사람이 보게
         c = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
-        td, cnt = trading_dates(c)   # [v09] 잔행 날짜 제외
+        td, cnt = trading_dates(c, index_dates=index_dates_for(OHLCV_DB))   # [v09] 잔행 제외 · v19 지수 봉 기준
+        try:   # v19: 점수 기록(score_daily)이 최신 거래일까지 왔나 — page_data 가 조용히 실패해도 텔레그램은 따로 계산해 나간다
+            sd = c.execute("SELECT MAX(date) FROM score_daily WHERE model='us_mus_v0'").fetchone()[0]
+        except sqlite3.OperationalError:
+            sd = None
+        try:   # v19: 격주 공매도 결제일이 얼마나 오래됐나(틸트 dtc 기준)
+            st = c.execute("SELECT MAX(settlement_date) FROM short_interest").fetchone()[0]
+        except sqlite3.OperationalError:
+            st = None
         c.close()
         if len(td) >= 2:
             n_t, n_p = cnt[td[-1]], baseline(cnt, td[-1])
@@ -99,6 +95,14 @@ def db_health():
             parts.append(f"최신일 {td[-1]} {n_t:,}행({ratio:.0%})")
             if ratio < COMPLETENESS_MIN:
                 warn.append(f"시세 최신일 부분 수집 {ratio:.0%}")
+            if sd and sd < td[-1] and ratio >= COMPLETENESS_MIN:
+                warn.append(f"점수 기록 최신 {sd} < 시세 {td[-1]} — 로그 'Build page data' 확인")
+            if st:
+                import datetime as _d
+                age = (_d.date(int(td[-1][:4]), int(td[-1][4:6]), int(td[-1][6:]))
+                       - _d.date(int(st[:4]), int(st[4:6]), int(st[6:]))).days
+                if age > SHORT_STALE_DAYS:
+                    warn.append(f"격주 공매도 결제일 {st}({age}일 전) — 틸트 dtc 가 오래됨")
     except Exception:
         pass
     parts.append(q("us_ohlcv.db",
@@ -118,9 +122,7 @@ def db_health():
     except Exception:
         pass
     line = "🗄 " + " · ".join(parts)
-    if warn:
-        line += f"\n⚠️ <b>빈 테이블</b>: {', '.join(warn)} — 수집 로그 확인 필요"
-    return line
+    return line, warn   # v19: 경고는 호출측이 메시지 맨 위 상태줄로 올린다
 
 
 def build_message():
@@ -186,7 +188,8 @@ def build_message():
             "SELECT symbol,name FROM listing_daily WHERE date=(SELECT MAX(date) FROM listing_daily)")}
         s.close()
     # 메시지는 순위만 간결히 — 점수·모멘텀 등 상세는 페이지에서 (2026-07-12 요청)
-    lines = ["🧪 <b>[US 테스트·관측]</b> 오늘의 상위 10",
+    manual = os.environ.get("TELEGRAM_FORCE", "").strip() == "1"   # v19: 수동 실행 재전송을 매일 메시지와 구분
+    lines = ["🧪 <b>[US 테스트·관측]</b> 오늘의 상위 10" + (" <i>(수동 실행 · 재전송)</i>" if manual else ""),
              f"기준일 {ds[i]} · 유니버스 {len(score):,}", ""]
     for r, (sym, _sc) in enumerate(top.items(), 1):
         lines.append(f"{r:2d}. <b>{sym}</b> — {names.get(sym, '')}")
@@ -209,7 +212,7 @@ def build_message():
                 k = max(0, min(8, round(8 * n_ / target)))
                 return "▓" * k + "░" * (8 - k)
 
-            lines += ["", "📈 <b>관측 현황</b> (판정 재료 · 본구축 후 40거래일 · h5 IC는 참고)"]
+            lines += ["", "📈 <b>관측 현황</b> (미등록 관측 — OOS 40거래일 시계는 PREREGISTER 뒤 시작 · h5 IC는 참고)"]
             for m in models:
                 dts = [d_ for (d_,) in c2.execute(
                     "SELECT DISTINCT date FROM score_daily WHERE model=? ORDER BY date", (m,))]
@@ -232,8 +235,10 @@ def build_message():
         c2.close()
     except Exception:
         pass
-    try:  # [v03] DB 건강 요약 — 조용한 실패 감시(비치명)
-        lines += ["", db_health()]
+    try:  # [v03] DB 건강 요약 — 조용한 실패 감시(비치명). v19: 점검 결과를 맨 위 한 줄로(정상/조치 필요를 먼저 보이게)
+        h_line, h_warn = db_health()
+        lines += ["", h_line]
+        lines.insert(0, ("⚠️ <b>점검 필요</b>: " + " · ".join(h_warn)) if h_warn else "✅ 수집·기록 점검 이상 없음")
     except Exception:
         pass
     lines += ["", "⚠️ <b>매수신호 아님</b> — 검증 전 관측(in-sample 가설, 생존편향 미보정)"]

@@ -69,7 +69,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
 `patch_note/vNN_YYYYMMDD.md`를 함께 작성한다. 필수 항목: 무엇을 / 왜(실측 근거) /
 바뀐 파일 / 검증 방법 / 남은 한계. 정본 규칙은 patch_note/README.md.
 research/ 산출물, docs/data 자동 커밋, 문서만의 변경은 제외.
-마지막 순번은 폴더에서 확인(2026-09-06 기준 v08 → 다음은 v09).
+마지막 순번은 patch_note/ 폴더에서 확인한다(고정 번호를 적지 않는다).
 
 ## 보고 규칙
 

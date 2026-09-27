@@ -246,7 +246,11 @@ def main():
     if args.self_test:
         self_test()
         return
-    con = ensure_db()
+    try:   # v19: DB 잠김·손상도 비치명 — try 밖이면 exit 1 로 'Run collectors' 스텝(뒤 수집기·점수·업로드)이 통째로 멈춘다
+        con = ensure_db()
+    except Exception as e:
+        print(f"⚠️  실적일: us_fundamentals.db 열기 실패(비치명 — 다음 실행 재시도): {e}")
+        return
     try:
         run_bulk(con, force=args.force)
     except Exception as e:

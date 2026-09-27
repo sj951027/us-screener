@@ -55,8 +55,10 @@ def _fetch_one(yf, con, name, code):
     close = df["Close"]
     if hasattr(close, "columns"):        # 멀티컬럼 방어(yf 버전차)
         close = close.iloc[:, 0]
+    from us_calendar import last_complete_date
+    cutoff = last_complete_date()   # v19: 24시간 시리즈(USDKRW·DXY)의 진행 중인 봉을 굳히지 않게(실측 USDKRW 20260927 일요일 행)
     rows = [(name, idx.strftime("%Y%m%d"), float(v))
-            for idx, v in close.dropna().items()]
+            for idx, v in close.dropna().items() if idx.strftime("%Y%m%d") <= cutoff]
     cur = con.executemany(
         "INSERT OR IGNORE INTO market_daily VALUES (?,?,?)", rows)
     con.commit()

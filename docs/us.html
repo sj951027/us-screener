@@ -66,7 +66,7 @@
 <body>
 <div class="wrap">
   <h1>🧪 US 스크리너 <span style="color:var(--accent)">mom12+상승일비율+size</span> · 테스트·관측</h1>
-  <div class="sub">미국 전체 상장(NYSE+NASDAQ) · 12-1 모멘텀 + 63일 상승일비율 + 거래대금 순위합 · 매일 자동 갱신(GitHub Actions)</div>
+  <div class="sub">미국 전체 상장(NYSE+NASDAQ) · 12-1 모멘텀 + 63일 상승일비율 + 거래대금 순위합 · 화~토 자동 갱신(GitHub Actions)</div>
 
   <div class="warn">
     ⚠️ <b>검증 전 관측 페이지 — 매수신호 아님.</b> 이 점수는 첫 스캔(2026-07-12)의
@@ -222,8 +222,14 @@ fetch('data/us_latest.csv?ts='+Date.now())
     sortKey='rank'; sortAsc=true;
     applyFilters();
     const d = allRows.length? allRows[0]['date']:'-';
+    if (!allRows.length) throw 0;   // v19: 헤더만 있는 CSV 도 '불러오지 못함'으로
+    // v19: 기준일을 요일과 함께, 오래됐으면 경고(주말 + 월요 휴장까지 최대 5일 — 그보다 오래면 수집 지연 의심)
+    const dd = (d && d.length===8) ? new Date(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6)) : null;
+    const age = dd ? Math.floor((Date.now()-dd)/864e5) : 0;
+    const dtxt = dd ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}(${'일월화수목금토'[dd.getDay()]}) 세션` : d;
     document.getElementById('meta').innerHTML =
-      `<div class="chip">기준일 <b>${d}</b></div>`+
+      (age > 5 ? `<div class="chip" style="color:#b45309"><b>⚠️ ${age}일 전 데이터 — 수집 지연·휴장 확인</b></div>` : '')+
+      `<div class="chip">기준일 <b>${dtxt}</b></div>`+
       `<div class="chip">유니버스 <b>${allRows.length}</b> (가드 통과)</div>`+
       `<div class="chip">구성 <b>12-1모멘텀 + 상승일비율 + 거래대금</b></div>`+
       `<div class="chip">가드 <b>$5 · $1M · 무변동컷</b></div>`+
@@ -231,7 +237,7 @@ fetch('data/us_latest.csv?ts='+Date.now())
   })
   .catch(()=>{
     document.querySelector('#tbl tbody').innerHTML=
-      '<tr><td colspan="15" class="loading">데이터 없음 (data/us_latest.csv) — 첫 Actions 실행 후 생성됩니다</td></tr>';
+      '<tr><td colspan="15" class="loading">데이터를 불러오지 못함 (data/us_latest.csv) — Actions 최근 실행 확인</td></tr>';
   });
 
 document.getElementById('fsearch').addEventListener('input', e=>{

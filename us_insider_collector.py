@@ -211,7 +211,7 @@ def parse_quarter_zip(zbytes, quarter):
             if code not in CODES:
                 continue
             acc = r[i_acc].strip()
-            filed, icik, sym = sub.get(acc, ("", None, ""))
+            filed, icik, sym = sub.get(acc, (None, None, ""))   # v19: 공시일 미상은 NULL — ''(빈 문자열)은 filed<=기준일 이 항상 참이라 미래 정보가 됐다
             ocik, f_off, f_dir, f_ten = own.get(acc, (None, 0, 0, 0))
             out.append((quarter, acc, icik, sym, ocik, f_off, f_dir, f_ten,
                         norm_date(r[i_dt]), code, num(r, i_sh), num(r, i_pr),
@@ -404,7 +404,11 @@ def main():
     if args.self_test:
         self_test()
         return
-    con = ensure_db()
+    try:   # v19: DB 잠김·손상도 비치명 — try 밖이면 exit 1 로 'Run collectors' 스텝(뒤 수집기·점수·업로드)이 통째로 멈춘다
+        con = ensure_db()
+    except Exception as e:
+        print(f"⚠️  내부자: us_fundamentals.db 열기 실패(비치명 — 다음 실행 재시도): {e}")
+        return
     try:
         run(con, force=args.force, max_files=args.max_files)
     except Exception as e:

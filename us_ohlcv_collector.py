@@ -85,7 +85,7 @@ REPAIR_CAP = 200      # 회당 재조정(전체 재수집) 심볼 상한 — 남
 DIV_RESERVE = 50      # v15: 회당 배당 재조정 최소 슬롯(상한의 1/4) — 절벽이 상한을 독점해 배당 1,304건이 3주간 시도 0(실측 09-27)
 GIVE_UP_ATTEMPTS = 6  # v08: 재조정 시도 상한(배치 예외도 세므로 3→6)
 LOW_YIELD_FRAC = 0.9  # v10: 최신일 수집 심볼 / 대상 — 이 미만이면 ⚠️ + 사유 집계 상세 출력(page_data 게이트와 같은 기준)
-STRAY_FRAC = 0.1      # 심볼 수가 최근 최대의 이 비율 미만인 날짜 = 잔행(휴장일에 흘린 1~2행) → 거래일로 안 침
+from us_calendar import STRAY_FRAC  # noqa: E402  v18: 잔행 판정 기준은 us_calendar 한 곳(값 0.1 그대로)
 # v10 계측 출력 크기 — 로그가 길어지지 않게 상한을 둔다
 MSG_TOP = 8           # 사유별 집계에서 보여줄 상위 메시지 수
 MSG_KEEP = 180        # 메시지 1건 보관 길이(문자)
@@ -133,14 +133,28 @@ def load_symbols():
     return sorted({s.replace(".", "-").replace("$", "-P") for s in syms if s.isascii()})
 
 
+def _px(v):
+    """v18: 시가·고가·저가가 0/NaN 이면 NULL. 실측 12행(2026, 무거래 우선주·신규상장 등)이 종가만 있고 O/H/L=0 이었다.
+    점수는 종가만 쓰므로 영향 없음 — 고가·저가 기반 지표를 넣을 때 0 이 가짜 값으로 섞이지 않게."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
 def store(con, df, symbol, replace=False):
     """yf.download 단일심볼 DataFrame → INSERT OR IGNORE(기본) / REPLACE(재조정용).
     replace=True 는 분할 소급 재수집에서만 — 과거 행을 조정된 값으로 덮어쓴다."""
     if df is None or df.empty:
         return 0
+    from us_calendar import last_complete_date
+    cutoff = last_complete_date()   # v19: 장중·장전 실행의 미완성 당일 봉은 저장 안 함(IGNORE 라 한 번 들어가면 안 고쳐짐)
     rows = []
     for idx, r in df.iterrows():
         try:
+            if idx.strftime("%Y%m%d") > cutoff:
+                continue
             c = float(r["Close"]) if r["Close"] == r["Close"] else None
             if c is None or c <= 0:
                 continue
@@ -148,7 +162,7 @@ def store(con, df, symbol, replace=False):
             if ac <= 0:      # v08: 0값 행은 수익률 inf 를 만든다(실측 101행) — 저장 안 함
                 continue
             rows.append((symbol, idx.strftime("%Y%m%d"),
-                         float(r["Open"]), float(r["High"]), float(r["Low"]), c, ac,
+                         _px(r["Open"]), _px(r["High"]), _px(r["Low"]), c, ac,
                          int(r["Volume"]) if r["Volume"] == r["Volume"] else 0))
         except Exception:
             continue
@@ -513,6 +527,11 @@ def self_test():
     # store: 0값 행 저장 안 함(v08)
     zero = pd.DataFrame({**base, "Close": [0.0, 45.53], "Adj Close": [0.0, 45.53]}, index=idx)
     check("store: close/adj_close 0 행은 건너뜀", store(con, zero, "ZERO") == 1)
+    ohl0 = pd.DataFrame({"Open": [0.0], "High": [0.0], "Low": [float("nan")], "Close": [4.46], "Adj Close": [4.46],
+                         "Volume": [0]}, index=pd.to_datetime(["2026-09-23"]))
+    store(con, ohl0, "ONEN")
+    r0 = con.execute("SELECT open, high, low, close FROM daily_ohlcv WHERE symbol='ONEN'").fetchone()
+    check("store: O/H/L 0·NaN 은 NULL, 종가는 보존(v18)", r0 == (None, None, None, 4.46))
 
     # 큐 등록 idempotent
     for _ in range(2):

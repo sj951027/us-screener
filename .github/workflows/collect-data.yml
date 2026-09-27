@@ -13,13 +13,19 @@ on:
   workflow_dispatch:
     inputs:
       price_repair_dates:
-        description: '누락 시세 복구 날짜(YYYYMMDD, 콤마 구분). 시세 복구 후 빈 점수는 자동 보충'
+        # v18: 두 입력의 역할이 헷갈려 설명에 ①②와 '언제 쓰는지'를 적는다(이름은 그대로 — 기존 기록과 호환)
+        description: '① 시세 복구 — 빠진 시세 행을 다시 받을 날짜(YYYYMMDD, 콤마). 점수는 최근 10거래일 안이면 자동 보충. 보통은 비워 둠'
         required: false
         default: ''
       repair_dates:
         # v08 2026-09-06: 부분 수집일(시세 일부 배치 누락)에 박제된 점수를 감사 로그와 함께
         #   재계산 — 수동 전용(스케줄 실행은 절대 안 씀). 예: 20260902,20260903
-        description: 'score_daily 재계산할 날짜(YYYYMMDD, 콤마 구분) — 부분 수집일 복구 전용'
+        description: '② 점수 재계산 — 이미 적재된 score_daily 를 지우고 다시 계산할 날짜(YYYYMMDD, 콤마). 시세가 완결된 날만. 결과는 로그 🛠 REPAIR 줄. 보통은 비워 둠'
+        required: false
+        default: ''
+      allow_fresh_start:
+        # v19: 정본(us-data.tar.gz·weekly)이 둘 다 없을 때만 '빈 DB 새 시작'을 허용하는 수동 확인. 비어 있으면 새 시작 대신 중단.
+        description: '③ 빈 새 시작 허용 — 정본이 모두 사라졌을 때만 yes (평소엔 비워 둠)'
         required: false
         default: ''
 
@@ -59,7 +65,9 @@ jobs:
           set -e
           if [ $rc -ne 0 ]; then
             if grep -qi "not found" view_err.txt; then
-              echo "릴리스 없음(최초) — 새로 시작"
+              # v19: 부트스트랩이 끝난 뒤 '새로 시작'이 정상인 경우는 없다 — 수동 확인 없이는 중단(정본 복구 절차: 지식 문서 §7)
+              if [ "${{ github.event.inputs.allow_fresh_start }}" != "yes" ]; then echo "❌ 릴리스 없음 — 빈 새 시작은 allow_fresh_start=yes 필요. 복구 절차: US_PROJECT_KNOWLEDGE.md §7"; exit 1; fi
+              echo "릴리스 없음(최초) — 새로 시작(allow_fresh_start=yes)"
             else
               cat view_err.txt; echo "❌ 릴리스 조회 실패(네트워크/API) — 빈 재시작 방지 중단"; exit 1
             fi
@@ -74,13 +82,20 @@ jobs:
             echo "❌ us-data.tar.gz 만 없고 us-data-weekly.tar.gz 는 있음 — 자산 소실로 판단, 빈 재시작 중단."
             echo "   복구: 주간 백업을 내려받아 us-data.tar.gz 이름으로 release 에 다시 올린 뒤 재실행"; exit 1
           else
-            echo "자산 없음(릴리스만 존재) — 새로 시작"
+            if [ "${{ github.event.inputs.allow_fresh_start }}" != "yes" ]; then echo "❌ 정본·주간 백업 모두 없음 — 빈 새 시작은 allow_fresh_start=yes 필요. 복구 절차: US_PROJECT_KNOWLEDGE.md §7"; exit 1; fi   # v19
+            echo "자산 없음(릴리스만 존재) — 새로 시작(allow_fresh_start=yes)"
           fi
           # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4). v11: 'ET 세션 요일'(ET 06시 이전이면 전날) — 화~토 UTC 실행과 맞춤
           # v17: 규칙은 us_calendar.py 한 곳 — `python us_calendar.py` 가 ISO 요일(월=1…일=7)을 찍는다
           echo "RUN_DOW=$(python us_calendar.py)" >> "$GITHUB_ENV"
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
+
+      # v19: 추가 전용 테이블 행수 스냅샷 — 업로드 직전 us_integrity check 가 감소(작은 테이블 소실)를 잡는다
+      - name: Row counts (before)
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+        run: python us_integrity.py snapshot "$RUNNER_TEMP/rows_before.json"
 
       # v10 2026-09-12: 러너 출구 IP 기록 — 수집 수확량이 러너마다 크게 다른데(실측 #53·#54 westcentralus 정상,
       #   #55 eastus2 16%) 로그에 IP 가 없어 대조가 불가능했다. GitHub 호스티드 러너(Azure)의 일회용 주소라
@@ -134,23 +149,32 @@ jobs:
           exit "$rc"
 
       - name: Build page data (docs/data/us_latest.csv)
+        id: page_data
+        continue-on-error: true   # v19: 강제 종료(OOM 등)도 오늘 수집분 업로드를 막지 않게 — 실패는 아래 알림에 표시
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
           REPAIR_DATES: ${{ github.event.inputs.repair_dates }}
         run: |
           # v08: 수동 입력이 있을 때만 부분 수집일 점수 재계산(감사 로그 출력) — 그 다음 정상 적재
-          if [ -n "$REPAIR_DATES" ]; then python us_page_data.py --repair "$REPAIR_DATES"; fi
+          # v19: 재계산 실패(exit 1)는 기록만 하고 계속 — 업로드 뒤 'Repair result gate' 가 실행을 실패로 표시
+          if [ -n "$REPAIR_DATES" ]; then
+            python us_page_data.py --repair "$REPAIR_DATES" || echo "SCORE_REPAIR_FAILED=1" >> "$GITHUB_ENV"
+          fi
           python us_page_data.py
 
       # v05 2026-08-30 데이터 확장 4차: 옵션 요약 스냅샷 — 소급 불가 데이터라 선제 적재.
       #   page_data 뒤 = 오늘 score_daily 반영된 관측 모델 종목 포함. 비치명·휴장일 가드 내장.
       - name: Options snapshot (관측 전용)
+        id: options
+        timeout-minutes: 45       # v19: 예산 2,100초 + 여유. 멈추면 잡 180분 한도가 업로드까지 삼킨다
+        continue-on-error: true   # v19: 관측 전용 — 실패가 정본 업로드를 막지 않게
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
         # v06 2026-09-06: 첫 5일 실측(516/516 성공·잘림 0·211s)으로 확대 합의 조건 충족 → top1000
         run: python us_options_collector.py --max-symbols 1000
 
       - name: Commit page data (GitHub Pages 갱신)
+        id: pages
         continue-on-error: true   # v08: 푸시 실패가 DB 업로드를 막지 않게(리뷰 H3) — 페이지는 다음날 따라잡음
         run: |
           git config user.name "github-actions[bot]"
@@ -160,39 +184,23 @@ jobs:
           git add docs/data/us_tilt.csv 2>/dev/null || true
           git diff --cached --quiet || (git commit -m "data: us_latest 자동 갱신" && git pull --rebase && git push)
 
-      - name: Telegram test notice (관측 표시 — 매수신호 아님)
+      # 손상된 DB 를 업로드하면 멀쩡한 이전본을 덮어써 버린다 — quick_check 통과 시에만 진행.
+      # v19: + 추가 전용 테이블 행수 감소 검사(us_integrity.py). score_daily 같은 작은 테이블이 비어도 50% 크기 게이트는 통과했다.
+      - name: Integrity gate (손상·행수 감소 DB 업로드 차단)
         env:
           US_DATA_DIR: ${{ github.workspace }}/us-screener-data
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          # 수동 실행은 휴장일 가드 무시하고 항상 전송 (스케줄 실행은 휴장 시 생략)
-          TELEGRAM_FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
-        run: python us_notify_test.py
-
-      - name: Integrity gate (손상 DB 업로드 차단)
-        run: |
-          python - <<'EOF'
-          # 손상된 DB 를 업로드하면 멀쩡한 이전본을 덮어써 버린다 — quick_check 통과 시에만 진행.
-          import glob, sqlite3, sys
-          bad = 0
-          for db in sorted(glob.glob("us-screener-data/*.db")):
-              try:
-                  r = sqlite3.connect(db).execute("PRAGMA quick_check(1)").fetchone()[0]
-              except Exception as e:
-                  r = f"error: {e}"
-              print(f"{db}: {r}")
-              if r != "ok":
-                  bad += 1
-          sys.exit(1 if bad else 0)
-          EOF
+          REPAIR_DATES: ${{ github.event.inputs.repair_dates }}
+        run: python us_integrity.py check "$RUNNER_TEMP/rows_before.json"
 
       - name: Upload data store
+        id: upload
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tar czf us-data.tar.gz us-screener-data
           # v08: 새 tar 가 직전의 50% 미만이면 정본 훼손 의심 — 업로드 중단(리뷰 H1 2차 방어)
           new_bytes=$(stat -c%s us-data.tar.gz)
+          if [ "$new_bytes" -gt 1610612736 ]; then echo "::warning::정본 tar $(du -h us-data.tar.gz | cut -f1) — Release 자산 2GB 한도 근접(1.5GiB 초과), 분할 검토"; fi   # v19
           if [ -n "${PREV_TAR_BYTES:-}" ] && [ "$new_bytes" -lt $((PREV_TAR_BYTES / 2)) ]; then
             echo "❌ 새 tar ${new_bytes}B < 직전 ${PREV_TAR_BYTES}B 의 50% — 정본 훼손 의심, 업로드 중단"; exit 1
           fi
@@ -206,19 +214,36 @@ jobs:
             echo "주간 백업본 갱신(금요일, 직전 일일본)"
           fi
 
+      # v19: 텔레그램을 업로드 뒤로 — '정상' 상위10 을 받은 뒤 '❌ 실패'가 따로 오던 순서 정리. 업로드가 실패하면
+      #   이 스텝은 건너뛰고 아래 실패 알림만 간다(DB 는 업로드로 바뀌지 않으므로 내용은 같다).
+      - name: Telegram test notice (관측 표시 — 매수신호 아님)
+        id: notify
+        continue-on-error: true
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # 수동 실행은 휴장일 가드 무시하고 항상 전송 (스케줄 실행은 휴장 시 생략)
+          TELEGRAM_FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
+        run: python us_notify_test.py
+
       # v13: 업로드까지 끝낸 뒤에 복구 실패를 실행 결과로 남긴다(빨간 실패 + 아래 텔레그램 알림 유지).
       - name: Repair result gate
-        if: steps.price_repair.outcome == 'failure'
+        if: steps.price_repair.outcome == 'failure' || env.SCORE_REPAIR_FAILED == '1'
         run: |
-          echo "❌ 시세 복구 미완료 — 오늘 수집분은 정본에 반영됨. 로그의 '[시세 복구]' 줄에서 잔여 종목 확인"
+          [ "${{ steps.price_repair.outcome }}" = "failure" ] && echo "❌ 시세 복구 미완료 — 로그 '[시세 복구]' 줄에서 잔여 종목 확인"
+          [ "${SCORE_REPAIR_FAILED:-}" = "1" ] && echo "❌ 점수 재계산(repair_dates) 미완료 — 로그 '🛠 REPAIR'·'::error::' 줄 확인"   # v19
+          echo "(오늘 수집분은 정본에 반영됨)"
           exit 1
 
+      # v19: 취소·타임아웃에도(cancelled), 비치명 페이지 푸시 실패에도 알림. 문구에 스텝별 결과를 넣어 급한지(업로드 실패)
+      #   아닌지(복구 게이트만 실패 — 정본은 반영됨) 바로 구분되게.
       - name: Failure alert (실패 시 텔레그램 한 줄)
-        if: failure()
+        if: failure() || cancelled() || steps.pages.outcome == 'failure'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
-            -d text="❌ [US] collect-us-data 실패 — 로그: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
+            -d text="❌ [US] collect-us-data ${{ job.status == 'success' && '(페이지 푸시만 실패 · 정본은 정상)' || job.status }} — 정본 업로드 ${{ steps.upload.outcome || '미실행' }} · 점수·페이지 ${{ steps.page_data.outcome || '-' }} · 페이지 푸시 ${{ steps.pages.outcome || '-' }} · 옵션 ${{ steps.options.outcome || '-' }} · 시세 복구 ${{ steps.price_repair.outcome || '-' }} — 로그: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true

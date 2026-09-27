@@ -6,10 +6,12 @@
 **지식 문서: `US_PROJECT_KNOWLEDGE.md`** (아키텍처·데이터·모델·결정로그·캘린더) ·
 설계 세부: `US_SCREENER_DESIGN.md`.
 
-## 현재 상태 (2026-07-12~)
+## 현재 상태 (2026-09-27 갱신)
 
-**완전 자동 관측 단계** — GitHub Actions 가 매일(미국 거래일 마감 후, 한국 아침 07시)
-수집→점수 관측 적재→페이지·텔레그램 갱신→백업까지 수행. 노트북 불필요.
+**완전 자동 관측 단계** — GitHub Actions 가 화~토 03:17 UTC(한국 12:17 예정, GitHub 지연으로 실제 도착은 오후)에
+전날 미국 세션을 수집→점수 관측 적재→페이지 갱신→정본 업로드→텔레그램까지 수행. 노트북 불필요.
+관측 모델은 전부 미등록(us_mus_v0·us_rvdtc_a) — 매수신호 아님. 운영 이력·결정은 `US_PROJECT_KNOWLEDGE.md` §5,
+동작 변경 기록은 `patch_note/`(마지막 v19), 장애 대응은 §7.
 
 - 표: https://sj951027.github.io/us-screener/us.html
 - 데이터 정본: Releases → "US data store" → us-data.tar.gz (금요일마다 weekly 2세대 백업)
@@ -20,8 +22,8 @@
 자동(Actions cron). 수동은 Actions 탭 → collect-us-data → Run workflow
 (수동 실행은 휴장일 가드 무시하고 텔레그램 전송).
 
-로컬 씨앗 수집(선택): `run_us_seed.bat` — 로컬 `../us-screener-data/` 는 2026-07-10
-백필본(구본)이며 정본은 Release 자산.
+로컬에서 수집기를 돌리지 않는다(Release 정본과 갈라짐 — CLAUDE.md). `run_us_seed.bat` 은 7월 부트스트랩 잔재.
+로컬 분석은 Release `us-data.tar.gz` 를 받아 읽기 전용으로.
 
 ## 원칙 리마인더
 

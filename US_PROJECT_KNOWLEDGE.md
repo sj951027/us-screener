@@ -1,6 +1,6 @@
 # US_PROJECT_KNOWLEDGE.md — 미국판 스크리너 지식 문서
 
-> 최종 갱신: 2026-09-16 · 이 문서가 이 repo 의 단일 기준(설계 세부는 US_SCREENER_DESIGN.md,
+> 최종 갱신: 2026-09-27 · 이 문서가 이 repo 의 단일 기준(설계 세부는 US_SCREENER_DESIGN.md,
 > 첫 스캔 근거는 research/RESEARCH_us_first_scan_20260712.md).
 > **한국판(dh-q7m3k)과 완전 별개 프로젝트** — 코드·데이터·유니버스·점수·표시를 절대 섞지 않는다.
 > 계승하는 것은 규율뿐이다.
@@ -21,7 +21,7 @@
 ```
 GitHub Actions (cron 03:17 UTC 화~토 = 전날 미국 세션 마감분, 한국 낮 12시 무렵 · v11 에서 22:00 UTC 로부터 이동)
   1) Release "data-store"에서 us-data.tar.gz 내려받아 이전 상태 복원
-  2) 수집기 5종 실행 (씨앗→시세→지수→시총순환→FINRA공매도)
+  2) 수집기 9종 실행 (씨앗→시세→지수→시총순환→격주공매도→일별공매도→XBRL→실적일→내부자) → 시세 복구·점검(us_price_repair)
   3) us_page_data.py → docs/data/us_latest.csv 자동 커밋 (GitHub Pages 표 갱신)
                      + us_ohlcv.db score_daily 관측 적재
   4) us_notify_test.py → 텔레그램 top10 (휴장일 가드: 최신일≠오늘ET면 생략, 수동실행은 FORCE)
@@ -90,6 +90,17 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   표시 us_tilt.html·기록 score_daily 뿐(가중치 0). 본구축 때 PREREGISTER 후보.
 
 ## §5. 결정 로그
+
+- 2026-09-27 (v19, patch_note/v19_20260927.md — 전수 점검 3갈래 후속): 거래일 = SPX 일봉 있는 날(9/23 의 6% 부분 수집일 잔행 오분류가
+  9/21 이중 계산 원인 — v18 서술 정정, 정본 전 이력 0-diff), ET 16:30 전 당일 봉 저장 안 함(USDKRW 일요일 행 실측), 업로드 전
+  추가 전용 10테이블 행수 감소 게이트(us_integrity.py), 빈 새 시작은 allow_fresh_start=yes 필요, 실패 알림 취소·타임아웃 포함+스텝별 결과,
+  텔레그램 첫 줄 점검 상태(점수 기록 최신일·공매도 결제일 노후), 페이지 기준일 요일·노후 경고, 오프라인 테스트 워크플로 tests.yml,
+  정본 복구 절차(§7). 점수식 0-diff.
+
+- 2026-09-27 (v18, patch_note/v18_20260927.md): 거래일·행수·완전성 분모·잔행 상수를 `us_calendar` 한 곳으로(복제 5벌 제거, 커밋본 대조 0-diff),
+  `--repair` 는 새 틸트가 계산될 때만 틸트 교체(소급 불가 관측 보존), 휴장 잔행 점검은 notice 로, O/H/L 0→NULL, XBRL 은 같은 공시의
+  3개월치/누적치 중 누적치를 결정적으로 선택(새 적재분부터), 워크플로 수동 입력 설명 ①②. 수집기 exit 0·XBRL 기본키 재구축·잔행 삭제는
+  이유를 적고 보류. 점수식 0-diff.
 
 - 2026-09-27 (v17, patch_note/v17_20260927.md): 'ET 06시 이전 = 전날 세션' 규칙을 `us_calendar.py` 한 곳으로(seed·options·notify·
   ohlcv·워크플로 RUN_DOW 5곳 복제 제거, 672개 시각 대조 불일치 0 · ohlcv 의 UTC−11 근사는 서머타임에 1시간 틀리던 것 교정).
@@ -319,6 +330,12 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
 
 ## §7. 트러블슈팅 (실측)
 
+- **정본 복구 절차 (v19)**: ① Release `us-data-weekly.tar.gz` 를 받아 `tar xzf` → 각 DB `PRAGMA quick_check` ok 확인
+  ② 그 파일을 `us-data.tar.gz` 이름으로 data-store 릴리스에 올린다(`gh release upload data-store us-data.tar.gz --clobber`)
+  ③ Actions → Run workflow. 주간본도 없으면 로컬에 가진 가장 최근 tar 로 ①~③(없을 때만 `allow_fresh_start=yes` —
+  score_daily·옵션·상장목록·시총 스냅샷은 소급 불가라 새 시작은 관측 기록 영구 손실). score_daily 의 us_mus_v0 순위는
+  `docs/data/us_latest.csv` 의 git 이력에도 남아 있다(자동 보충·repair 날짜는 CSV 를 쓰지 않아 빈 구간 있음).
+
 - DB 파일 단독 복사는 hot-copy 손상 위험 — 스냅샷은 sqlite backup API(`src.backup(dst)`),
   검증은 `PRAGMA quick_check`. 분석용 반출은 Release tar 를 그대로 받는 게 정본.
 - yfinance: 심볼 표기 `.`→`-`(BRK.B→BRK-B), 워런트·유닛·라이츠는 증권명 키워드로 제외,
@@ -370,8 +387,9 @@ score_daily 관측 누적(등록 전 관측이며 OOS 판정 재료 아님):
   미확정. 대응: 2차 수집(대기+`start=` 명시 소배치, 러너 로그 `2차 수집 완료:` 줄로 효과 확인) + page_data
   게이트·자동 보충. 그래도 부족하면 후보: 1차도 `start=` 명시 → 배치 간 대기 상향 → 유니버스 분할 수집.
   진단 요령: 정본 tar 의 `daily_ohlcv` 날짜별 심볼 수 + 결측 심볼의 정렬 순서 분위 분포(후반 집중이면 스로틀 의심).
-- **휴장일 잔행**: 야후가 휴장일에 1~2행을 흘린다(20260907 CREG). page_data·notify 의 `trading_dates()`(심볼 수 <
-  최근 20거래일 최대의 10% → 제외)로 거른다. 전 이력(861일)에서 잔행은 이 하루뿐(2026-09-11 실측).
+- **휴장일 잔행**: 야후가 휴장일에 1~2행을 흘린다(20260907 CREG). `us_calendar.trading_dates()`(v18 공용)가 거른다 —
+  v19 부터는 **지수(SPX) 일봉이 없는 날 = 휴장**(지수 수집 기간 밖만 v09 의 '최근 20일 최대의 10% 미만' 규칙). 10% 규칙은 09-23
+  실행 때 6% 짜리 실제 부분 수집일(20260922)을 잔행으로 오분류했다. 전 이력(861일)에서 잔행은 이 하루뿐(2026-09-11 실측).
 - **당일 시세가 16% 안팎만 오면 먼저 실행 시각을 본다 (v11, 2026-09-17)**: 야후 일봉 당일분이 20:00 ET(애프터마켓
   종료) 이후 한동안 대부분 종목에서 빠진다(실측: 00:00~01:08 UTC 사이 실행 전부 부분, 01:08·02:26 UTC 이후 정상 —
   EST 기간엔 1시간 뒤로 밀릴 것으로 추정). 러너 지역·IP·라이브러리 버전과는 무관했다.

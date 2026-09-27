@@ -88,12 +88,13 @@ def et_today():
 
 def pick_universe(ohlcv_con, top_n=TOP_N):
     """유동성 상위 top_n(가드 close≥$5) ∪ 관측 모델 종목. 실패 시 빈 리스트(비치명)."""
-    last = ohlcv_con.execute("SELECT MAX(date) FROM daily_ohlcv").fetchone()[0]
-    if not last:
+    # v19: 원시 MAX(date)·DISTINCT date 대신 공용 거래일 — 휴장일 잔행 1행이 '오늘'로 잡혀 휴장 가드를 통과하던 경로 차단
+    from us_calendar import index_dates_for, trading_dates
+    td, _ = trading_dates(ohlcv_con, index_dates=index_dates_for(OHLCV_DB))
+    if not td:
         return [], None
-    d20 = [r[0] for r in ohlcv_con.execute(
-        "SELECT DISTINCT date FROM daily_ohlcv WHERE date<=? ORDER BY date DESC LIMIT 20",
-        (last,))]
+    last = td[-1]
+    d20 = td[-20:][::-1]
     top = [r[0] for r in ohlcv_con.execute(f"""
         SELECT symbol FROM daily_ohlcv
         WHERE date IN ({",".join("?" * len(d20))})

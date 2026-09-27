@@ -126,6 +126,9 @@ def main():
         start = dt.date.fromisoformat(args.backfill_from)
     else:
         start = today - dt.timedelta(days=35)
+        last = max(done) if done else None
+        if last:   # v19: 마지막 확보 결제일 다음날부터 — 35일 고정창이면 오래 멈춘 뒤 복구될 때 사이 결제일이 창 밖으로 빠진다
+            start = min(start, dt.date(int(last[:4]), int(last[4:6]), int(last[6:])) + dt.timedelta(days=1))
     cands = [d for d in candidate_dates(start, today)
              if d.strftime("%Y%m%d") not in done]
     print(f"[탐침] {start}~{today} 후보 {len(cands)}일 (이미 확보 {len(done)}파일)")

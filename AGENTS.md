@@ -42,7 +42,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
 
 ## 운영 사실
 
-- 실행은 GitHub Actions(cron 22:00 UTC 월~금), 노트북 불필요. 최신 DB 정본은
+- 실행은 GitHub Actions(cron 03:17 UTC 화~토 = 전날 ET 세션, v11), 노트북 불필요. 최신 DB 정본은
   Release 자산(us-data.tar.gz):
   `https://github.com/sj951027/us-screener/releases/download/data-store/us-data.tar.gz`.
   로컬 폴더의 `_t_us-data.tar.gz` 등 사본은 구본일 수 있다.
@@ -69,7 +69,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
 `patch_note/vNN_YYYYMMDD.md`를 함께 작성한다. 필수 항목: 무엇을 / 왜(실측 근거) /
 바뀐 파일 / 검증 방법 / 남은 한계. 정본 규칙은 patch_note/README.md.
 research/ 산출물, docs/data 자동 커밋, 문서만의 변경은 제외.
-마지막 순번은 폴더에서 확인(2026-09-06 기준 v08 → 다음은 v09).
+마지막 순번은 patch_note/ 폴더에서 확인한다(고정 번호를 적지 않는다).
 
 ## 보고 규칙
 
@@ -133,10 +133,10 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
   in-sample 수치(+88.5%/74% 등)를 검증된 성과처럼 말하지 않는다.
 
 [운영 사실]
-- 실행은 GitHub Actions(cron 22:00 UTC 월~금), 노트북 불필요. 최신 DB 정본은
+- 실행은 GitHub Actions(cron 03:17 UTC 화~토 = 전날 ET 세션, v11), 노트북 불필요. 최신 DB 정본은
   Release 자산(us-data.tar.gz) — 로컬 폴더는 구본일 수 있다.
-- 당신은 네트워크가 없다. yfinance/SEC/FINRA 호출은 실행 불가 — 필요하면 사용자에게
-  실행과 로그/Release tar를 요청한다. "내가 돌렸다"고 말하지 않는다.
+- 네트워크는 위 '네트워크(Codex 로컬 실행 기준)' 규칙을 따른다 — 수집기는 Actions 에 맡기고,
+  러너 로그는 사용자에게 요청한다. "내가 돌렸다"고 말하지 않는다.
 - repo는 public — 토큰·비밀을 코드·커밋·대화 출력에 절대 넣지 않는다.
 - DB 반출은 Release tar가 정본, 스냅샷은 sqlite backup API(핫카피 금지),
   zip 추출은 Python zipfile(zip64). run_id는 미국 거래일(ET) 앵커.

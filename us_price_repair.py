@@ -8,7 +8,8 @@ import datetime as dt
 import sqlite3
 import time
 
-WINDOW = 20
+from us_calendar import STRAY_FRAC, baseline, date_counts, index_dates_for   # v18: 공용 정의(이 모듈 경로로도 계속 import 가능)
+
 MIN_COVERAGE = .9
 AUDIT_DAYS = 20
 # v14: 실패선은 점수 게이트와 같은 식(커버리지 < MIN_COVERAGE) — 복구가 '성공'이라 한 날은 page_data 도 적재하고,
@@ -17,21 +18,12 @@ AUDIT_DAYS = 20
 RESIDUAL_WARN_FRAC = .01
 
 
-def baseline(counts, day):
-    prior = [counts[d] for d in sorted(counts) if d < day][-WINDOW:]
-    return max(prior, default=counts.get(day, 0))
-
-
 def gaps(con, counts=None):
     counts = counts if counts is not None else date_counts(con)
     # Observed weekdays only: holidays/zero-row sessions require a calendar review.
     return [(d, counts[d], baseline(counts, d)) for d in sorted(counts)[-AUDIT_DAYS:]
             if dt.datetime.strptime(d, '%Y%m%d').weekday() < 5
             and counts[d] < MIN_COVERAGE * baseline(counts, d)]
-
-
-def date_counts(con):
-    return dict(con.execute('SELECT date, COUNT(*) FROM daily_ohlcv WHERE close > 0 GROUP BY date'))
 
 
 def anchors(con, day, counts=None):
@@ -132,8 +124,15 @@ def main():
                                    '로그의 [시세 복구] 줄 확인')
         else:
             counts = date_counts(con)
+        idx = index_dates_for(OHLCV_DB)
         for day, have, expected in gaps(con, counts):
-            print(f'::warning::시세 점검 {day}: {have}/{expected} ({have/expected:.1%}); 휴장 잔행 여부 확인 필요')
+            # v18: 휴장일 잔행은 경고 대신 안내. v19: 지수(SPX) 봉 기간 안이면 '지수 봉 없음'으로만 잔행 판정 —
+            #   6% 짜리 실제 부분 수집일(20260922, 09-23 시점)을 '조치 불필요'로 격하하던 문제
+            holiday = (day not in idx) if idx and min(idx) <= day <= max(idx) else have < STRAY_FRAC * expected
+            if holiday:
+                print(f'::notice::시세 점검 {day}: {have}행 — 휴장일 잔행 추정(조치 불필요)')
+            else:
+                print(f'::warning::시세 점검 {day}: {have}/{expected} ({have/expected:.1%}) — 부분 수집 의심')
 
 
 if __name__ == '__main__':

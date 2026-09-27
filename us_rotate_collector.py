@@ -19,7 +19,7 @@ import sqlite3
 import sys
 import time
 
-from us_ohlcv_collector import STRAY_FRAC   # v16: 휴장일 잔행 판정 기준(수집기와 같은 값)
+from us_calendar import STRAY_FRAC   # v16: 휴장일 잔행 판정 기준 — v18: 공용 정의
 from us_calendar import session_date as et_today   # v17: 시세 DB 가 비었을 때의 대체 날짜(공용 세션 규칙)
 
 ROTATE_MAX_STALL = 3   # v16: 배치 전부 실패가 이 횟수 연속이면 그 구간을 건너뛰고 전진(순환 전체가 멈추지 않게)

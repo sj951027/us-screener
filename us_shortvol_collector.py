@@ -233,7 +233,7 @@ def main():
         time.sleep(SLEEP)
     bad = {k: v for k, v in codes.items() if k not in (200, 404)}
     if cands and got == 0 and bad and sum(bad.values()) >= min(5, len(cands)):
-        print(f"❌ 일별 공매도 거래량 — 후보 {len(cands)}일 전부 실패, 상태코드 {bad} (차단/UA 의심). "
+        print(f"❌ 일별 공매도 거래량 — 후보 {len(cands)}일 전부 실패, 상태코드 {bad} (403 은 FINRA CDN 의 '파일 없음'일 수 있음 — 최신일이 멈추면 경로·게시 여부부터). "
               f"비치명이지만 데이터는 0 — 텔레그램 '일별공매도' 최신일이 멈추면 이 줄을 확인할 것")
     n, nd, dmin, dmax = con.execute(
         "SELECT COUNT(*), COUNT(DISTINCT date), MIN(date), MAX(date) FROM short_volume_daily").fetchone()

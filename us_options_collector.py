@@ -39,7 +39,6 @@ import sqlite3
 import sys
 import time
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -81,13 +80,10 @@ def apply_ddl(con):
             pass  # 이미 있음
 
 
-SESSION_ROLLOVER_H = 6   # v11: ET 06시 전 실행은 전날 세션 — 03:17 UTC cron 이 지연돼 ET 자정을 넘겨도 같은 거래일
-
-
 def et_today():
-    """ET 세션 날짜(YYYYMMDD). ET 06시 이전이면 전날(v11 — 마감 후 새벽 실행 대응)."""
-    now = dt.datetime.now(ZoneInfo("America/New_York")) - dt.timedelta(hours=SESSION_ROLLOVER_H)
-    return now.strftime("%Y%m%d")
+    """ET 세션 날짜(YYYYMMDD). 규칙은 us_calendar 한 곳(v17 — v11 의 ET 06시 롤오버)."""
+    from us_calendar import session_date
+    return session_date()
 
 
 def pick_universe(ohlcv_con, top_n=TOP_N):

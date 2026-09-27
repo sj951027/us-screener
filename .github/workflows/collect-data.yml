@@ -77,7 +77,8 @@ jobs:
             echo "자산 없음(릴리스만 존재) — 새로 시작"
           fi
           # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4). v11: 'ET 세션 요일'(ET 06시 이전이면 전날) — 화~토 UTC 실행과 맞춤
-          echo "RUN_DOW=$(TZ=America/New_York date -d '-6 hours' +%u)" >> "$GITHUB_ENV"
+          # v17: 규칙은 us_calendar.py 한 곳 — `python us_calendar.py` 가 ISO 요일(월=1…일=7)을 찍는다
+          echo "RUN_DOW=$(python us_calendar.py)" >> "$GITHUB_ENV"
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 
@@ -199,7 +200,7 @@ jobs:
           gh release upload data-store us-data.tar.gz --clobber
           echo "업로드 완료: $(du -h us-data.tar.gz | cut -f1)"
           # 금요일 세션(잡 시작 시점 ET 세션 요일, v11)엔 주간 백업본 — v08: '직전 일일본'을 보관해 오늘 run 오염과 분리
-          if [ "${RUN_DOW:-$(TZ=America/New_York date -d '-6 hours' +%u)}" = "5" ]; then
+          if [ "${RUN_DOW:-$(python us_calendar.py)}" = "5" ]; then
             if [ -f us-data-prev.tar.gz ]; then cp us-data-prev.tar.gz us-data-weekly.tar.gz; else cp us-data.tar.gz us-data-weekly.tar.gz; fi
             gh release upload data-store us-data-weekly.tar.gz --clobber
             echo "주간 백업본 갱신(금요일, 직전 일일본)"

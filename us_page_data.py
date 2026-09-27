@@ -93,6 +93,18 @@ def main(asof=None, repair=False, catchup=False):
     con = sqlite3.connect(f"file:{OHLCV_DB}?mode=ro", uri=True)
     all_dates, counts = trading_dates(con)   # v09: 잔행 날짜 제외
     latest = all_dates[-1]
+    if asof is None and not repair and not catchup:
+        # v16: 최신 거래일이 이미 적재돼 있으면(새 세션 없음) CSV·점수·틸트를 통째로 다시 계산하지 않는다. v15 는 적재만 막아
+        #   페이지 CSV(두 번째 계산)와 score_daily·틸트(첫 번째 계산)가 같은 날짜에 서로 다른 순위를 갖게 됐다.
+        try:
+            n_have = con.execute("SELECT COUNT(*) FROM score_daily WHERE model=? AND date=?",
+                                 (MODEL_ID, latest)).fetchone()[0]
+        except sqlite3.OperationalError:   # 최초 실행(테이블 없음)
+            n_have = 0
+        if n_have:
+            print(f"⏭ {latest} 이미 적재({n_have:,}행) — 새 세션 없음, 페이지·점수·틸트 재계산 생략. 재계산은 --repair")
+            con.close()
+            return
     if asof:
         if asof not in all_dates:
             print(f"⚠️ {asof} 는 daily_ohlcv 에 없는 날짜 — 생략"); con.close(); return

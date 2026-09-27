@@ -19,7 +19,10 @@ import sqlite3
 import sys
 import time
 
-from us_seed_collector import et_today   # v15: 스냅샷 날짜를 ET 세션 기준으로(러너 UTC 날짜는 v11 이후 하루 앞섬)
+from us_ohlcv_collector import STRAY_FRAC   # v16: 휴장일 잔행 판정 기준(수집기와 같은 값)
+from us_calendar import session_date as et_today   # v17: 시세 DB 가 비었을 때의 대체 날짜(공용 세션 규칙)
+
+ROTATE_MAX_STALL = 3   # v16: 배치 전부 실패가 이 횟수 연속이면 그 구간을 건너뛰고 전진(순환 전체가 멈추지 않게)
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -57,6 +60,23 @@ def load_symbols():
     return sorted({s.replace(".", "-").replace("$", "-P") for s in syms if s.isascii()})
 
 
+def session_anchor(con):
+    """v16: 스냅샷 날짜 = 시세 DB 의 최근 미국 거래일. CLAUDE.md '미국 거래일(ET) 앵커' — 주말·휴장일 수동 실행이
+    비거래일 라벨을 찍지 않게(실측 09-27 일요일 러너 #68 이 20260926(토) 에 542행). 휴장일 잔행(1~2행)은 건너뛴다."""
+    since = (dt.date.today() - dt.timedelta(days=14)).strftime("%Y%m%d")
+    try:
+        counts = con.execute("SELECT date, COUNT(*) FROM daily_ohlcv WHERE date >= ? GROUP BY date ORDER BY date",
+                             (since,)).fetchall()
+    except sqlite3.OperationalError:
+        counts = []
+    if counts:
+        top = max(n for _, n in counts)
+        for d, n in reversed(counts):
+            if n >= STRAY_FRAC * top:
+                return d
+    return et_today()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--batch", type=int, default=600)
@@ -74,7 +94,7 @@ def main():
     pos_row = con.execute("SELECT v FROM rotate_state WHERE k='pos'").fetchone()
     pos = pos_row[0] % len(symbols) if pos_row else 0
     batch = [symbols[(pos + i) % len(symbols)] for i in range(min(args.batch, len(symbols)))]
-    today = et_today()   # v15: ET 세션 날짜(ET 06시 이전은 전날). 2026-09-17~26 행은 러너 UTC 날짜라 +1일 라벨(패치노트 v15)
+    today = session_anchor(con)   # v16: 최근 거래일 앵커. 2026-09-17~26 행은 러너 UTC 날짜라 +1일 라벨, 09-26(토) 1,066행 잔존
     print(f"[순환] 위치 {pos}/{len(symbols)} 부터 {len(batch)}종목 "
           f"(전체 한 바퀴 ≈ {len(symbols)//args.batch + 1}일)")
 
@@ -117,12 +137,19 @@ def main():
     if sec_rows:
         con.executemany(
             "INSERT OR REPLACE INTO sector_cache VALUES (?,?,?,?)", sec_rows)
-    if batch and ok == 0:   # v15: 전부 실패(레이트리밋 등)면 위치를 옮기지 않는다 — 스냅샷은 소급 불가라 그 구간이 한 바퀴 빈다
-        print(f"⚠️ 배치 {len(batch)}종목 전부 실패 — 순환 위치 {pos} 유지(다음 실행 같은 구간 재시도)")
+    stall_row = con.execute("SELECT v FROM rotate_state WHERE k='stall'").fetchone()
+    stall = stall_row[0] if stall_row else 0
+    if batch and ok == 0 and stall + 1 < ROTATE_MAX_STALL:
+        # v15: 전부 실패(레이트리밋 등)면 위치를 옮기지 않는다 — 스냅샷은 소급 불가라 그 구간이 한 바퀴 빈다
+        con.execute("INSERT OR REPLACE INTO rotate_state VALUES ('stall', ?)", (stall + 1,))
+        print(f"⚠️ 배치 {len(batch)}종목 전부 실패 — 순환 위치 {pos} 유지(연속 {stall + 1}/{ROTATE_MAX_STALL}, 다음 실행 재시도)")
     else:
+        if batch and ok == 0:   # v16: 연속 상한 도달 — 이 구간만 비우고 나머지 순환은 계속
+            print(f"⚠️ {ROTATE_MAX_STALL}회 연속 전부 실패 — 이 구간을 건너뛰고 전진(순환 전체 정지 방지)")
         con.execute("INSERT OR REPLACE INTO rotate_state VALUES ('pos', ?)",
                     ((pos + len(batch)) % len(symbols),))
-        if fail > ok:
+        con.execute("INSERT OR REPLACE INTO rotate_state VALUES ('stall', 0)")
+        if 0 < ok < fail:
             print(f"⚠️ 실패 {fail} > 성공 {ok} — 이 구간 시총 결손 큼(다음 바퀴 재시도)")
     con.commit()
     n, nd = con.execute(

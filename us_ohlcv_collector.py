@@ -370,19 +370,24 @@ def _queue_fail(con, sym, reason, detail, max_attempts=GIVE_UP_ATTEMPTS):
 def select_queue(con, cap=REPAIR_CAP, reserve=DIV_RESERVE):
     """이번 실행에 처리할 큐 항목. v08: 분할 > 절벽(50% 오염) > 배당(~1% 드리프트) — 배당이 절벽을 굶기지 않게.
     v15: 반대로 절벽이 배당을 굶겼다(실측 09-27: 절벽 245건이 상한 200을 매번 차지, 배당 1,304건 시도 0회 3주).
-    배당에 reserve 슬롯을 남기고, 배당이 모자라면 남은 슬롯은 다시 절벽으로 채운다. attempts 는 _queue_fail 이 관리."""
-    def pick(where, limit, offset=0):
+    배당에 reserve 슬롯을 남기고, 배당이 모자라면 남은 슬롯은 다시 절벽으로 채운다. attempts 는 _queue_fail 이 관리.
+    v16: ① 분할은 예약과 무관하게 항상 먼저(예약은 절벽 몫에서만 뗀다 — v15 는 분할까지 배당 뒤로 밀 수 있었다)
+         ② OFFSET 이어붙이기 제거 + 정렬키에 symbol — 배당 1,304건이 같은 queued_at 이라 두 번 나눠 뽑으면 중복·누락 위험.
+    v17: 같은 사유 안에서는 **시도 횟수가 적은 것부터**. 재수집해도 안 고쳐지는 절벽(실제 급락 오탐·야후 미조정)이
+         오래된 순으로 매 실행 앞자리를 차지해, 새로 생긴 진짜 분할 절벽이 그 뒤에서 기다렸다(러너 #68: 200 중 53 완료,
+         나머지 다수 '↻ 절벽 잔존'). 실패한 항목은 자연히 뒤로 가고, GIVE_UP_ATTEMPTS 에 닿으면 v08 대로 봉인된다."""
+    def pick(where, limit):
         if limit <= 0:
             return []
         return con.execute(
             "SELECT symbol, reason, detail FROM adjust_queue WHERE " + where +
-            " ORDER BY CASE reason WHEN 'split' THEN 0 WHEN 'cliff' THEN 1 ELSE 2 END, queued_at "
-            "LIMIT ? OFFSET ?", (limit, offset)).fetchall()
-    head = pick("reason != 'div'", cap - min(reserve, cap))
-    tail = pick("reason = 'div'", cap - len(head))
-    if len(head) + len(tail) < cap:
-        head += pick("reason != 'div'", cap - len(head) - len(tail), offset=len(head))
-    return head + tail
+            " ORDER BY attempts, queued_at, symbol LIMIT ?", (limit,)).fetchall()
+    other = "reason NOT IN ('split', 'cliff')"          # div(및 미지정 사유) — v08 의 ELSE 2 와 같은 묶음
+    splits = pick("reason = 'split'", cap)
+    n_other = con.execute(f"SELECT COUNT(*) FROM adjust_queue WHERE {other}").fetchone()[0]
+    div_slots = min(reserve, n_other, cap - len(splits))
+    cliffs = pick("reason = 'cliff'", cap - len(splits) - div_slots)
+    return splits + cliffs + pick(other, cap - len(splits) - len(cliffs))
 
 
 def process_queue(con, cap=REPAIR_CAP):
@@ -539,6 +544,26 @@ def self_test():
     c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,0)", [(f"D{i}", "div", "", "t") for i in range(300)])
     sel = select_queue(c2, cap=200, reserve=50)
     check("queue: 배당만 있으면 200 전부 배당", len(sel) == 200 and all(r[1] == "div" for r in sel))
+    # v16: 배당이 예약보다 적을 때(동률 queued_at) 중복 없이 200 · 분할은 예약과 무관하게 전부 먼저
+    c2.execute("DELETE FROM adjust_queue")
+    c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,0)",
+                   [(f"C{i}", "cliff", "", "t") for i in range(250)] + [(f"D{i}", "div", "", "t") for i in range(20)])
+    sel = select_queue(c2, cap=200, reserve=50)
+    check("queue: 절벽 250+배당 20 → 중복 없는 200(배당 20 전부)",
+          len(sel) == 200 and len({r[0] for r in sel}) == 200 and sum(r[1] == "div" for r in sel) == 20)
+    c2.execute("DELETE FROM adjust_queue")
+    c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,0)",
+                   [(f"S{i}", "split", "", "t") for i in range(180)] + [(f"C{i}", "cliff", "", "t") for i in range(100)]
+                   + [(f"D{i}", "div", "", "t") for i in range(100)])
+    sel = select_queue(c2, cap=200, reserve=50)
+    check("queue: 분할 180 은 예약과 무관하게 전부 선택(v08 우선순위 유지)",
+          sum(r[1] == "split" for r in sel) == 180 and len(sel) == 200 and sel[0][1] == "split")
+    # v17: 오래됐지만 5회 실패한 절벽 150 + 새로 들어온 절벽 100 → 상한 100 이면 새 절벽만
+    c2.execute("DELETE FROM adjust_queue")
+    c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,5)", [(f"OLD{i}", "cliff", "", "2026-08-24") for i in range(150)])
+    c2.executemany("INSERT INTO adjust_queue VALUES (?,?,?,?,0)", [(f"NEW{i}", "cliff", "", "2026-09-27") for i in range(100)])
+    sel = select_queue(c2, cap=100, reserve=50)
+    check("queue: 시도 적은 새 절벽이 반복 실패한 옛 절벽보다 먼저", len(sel) == 100 and all(r[0].startswith("NEW") for r in sel))
     c2.close()
     # 실패 GIVE_UP_ATTEMPTS 회 → 포기(큐 제거 + checked 표기, 다중 절벽 detail 전부)
     con.execute("UPDATE adjust_queue SET reason='cliff', detail='20260811,20260812' WHERE symbol='MNSX'")
@@ -706,8 +731,8 @@ def main():
         print(f"[증분 결측] 빈 프레임 {n_empty} · 응답에 심볼 없음 {n_nokey} · 예외 {n_exc} "
               f"(대상 {len(symbols)})")
         print(cap.report("증분"))
-        # v11: 러너는 UTC 화~토 새벽 실행 — 요일은 ET 세션 기준(UTC-5 근사 후 06시 롤오버)
-        if total == 0 and (dt.datetime.utcnow() - dt.timedelta(hours=11)).weekday() < 5:
+        from us_calendar import session_weekday   # v17: v11 의 UTC−11 근사 대신 공용 세션 규칙(서머타임 반영)
+        if total == 0 and session_weekday() < 5:
             print("⚠️ 평일인데 증분 0행 — 휴장일이 아니면 수집 실패(rate limit/네트워크). "
                   "텔레그램 '시세 없음' 알림·건강줄 확인. 다음 실행이 창을 넓혀 자동 보충함")
         if n_batch_fail:

@@ -169,7 +169,7 @@ def main():
     print(f"완료: 신규 {got}파일 · 응답 {codes}. 누적 {n:,}행 · {nd}개 결제일.")
     bad = sum(v for k, v in codes.items() if k == "exc" or (isinstance(k, int) and (k == 403 or k >= 500)))
     if cands and got == 0 and bad == len(cands):
-        print(f"  ❌ 후보 {len(cands)}일 전부 실패({codes}) — 차단/UA 의심. 텔레그램 건강줄 '공매도' 최신일이 멈추면 이 줄 확인")
+        print(f"  ❌ 후보 {len(cands)}일 전부 실패({codes}) — 403 은 FINRA CDN 이 '파일 없음'에도 주는 코드(실측 09-27: 0831 은 200·0915 는 403). 200 이 계속 없으면 경로·게시 여부부터 확인")
 
 
 if __name__ == "__main__":

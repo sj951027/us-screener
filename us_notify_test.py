@@ -272,10 +272,8 @@ def main():
     # 미국 공휴일에도 cron 은 돌지만 새 데이터가 없어 '전날 기준일' 중복 알림이
     # 나가는 구멍(2026-07-12 발견). 최신 데이터 날짜 != 오늘(ET)이면 휴장으로
     # 보고 전송 생략. 수동 실행(workflow_dispatch)은 TELEGRAM_FORCE=1 로 항상 전송.
-    import datetime as _dt
-    from zoneinfo import ZoneInfo
-    # v11: 실행이 03:17 UTC(ET 밤~새벽)로 옮겨져 ET 06시 이전이면 전날 세션으로 본다
-    now_session = _dt.datetime.now(ZoneInfo("America/New_York")) - _dt.timedelta(hours=6)
+    from us_calendar import session_now   # v17: v11 의 'ET 06시 이전 = 전날 세션' 규칙을 한 곳에서
+    now_session = session_now()
     today_et = now_session.strftime("%Y%m%d")
     if os.environ.get("TELEGRAM_FORCE", "").strip() != "1" and latest != today_et:
         print(f"⏭ 휴장일 추정(최신 {latest} ≠ 오늘 ET {today_et}) — 순위 전송 생략.")

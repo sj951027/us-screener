@@ -79,7 +79,8 @@ def trading_dates(con):
 def completeness(counts, d_today, d_prev):
     """(당일 심볼 수, 전일 심볼 수, 비율). 전일 없으면 비율 1. v09: trading_dates 의 counts 를 받음."""
     n_t = counts.get(d_today, 0)
-    n_p = counts.get(d_prev, 0) if d_prev else 0
+    from us_price_repair import baseline
+    n_p = baseline(counts, d_today) if d_prev else 0
     return n_t, n_p, (n_t / n_p if n_p else 1.0)
 
 

@@ -18,6 +18,7 @@ mom12 + upratio63 + size(거래대금) 순위합의 당일 상위 종목을 텔�
 [v09 2026-09-11] 잔행 날짜(휴장일에 야후가 흘린 1~2행 — 실측 20260907 CREG) 를 거래일에서 제외(게이트
 분모·계산 창 모두, us_page_data 와 동일 기준). 부분 수집 메시지는 '다음 실행 자동 보충' 안내로 변경.
 """
+from us_price_repair import baseline
 import argparse
 import os
 import sqlite3
@@ -93,7 +94,7 @@ def db_health():
         td, cnt = trading_dates(c)   # [v09] 잔행 날짜 제외
         c.close()
         if len(td) >= 2:
-            n_t, n_p = cnt[td[-1]], cnt[td[-2]]
+            n_t, n_p = cnt[td[-1]], baseline(cnt, td[-1])
             ratio = n_t / n_p if n_p else 1.0
             parts.append(f"최신일 {td[-1]} {n_t:,}행({ratio:.0%})")
             if ratio < COMPLETENESS_MIN:
@@ -128,12 +129,12 @@ def build_message():
     all_dates, counts = trading_dates(con)   # [v09] 잔행 날짜 제외(us_page_data 와 동일)
     dates = all_dates[-LOOKBACK:]
     if len(dates) >= 2:  # [v08] 완전성 게이트 — us_page_data 와 같은 기준(전일의 90%)
-        n_t, n_p = counts[dates[-1]], counts[dates[-2]]
+        n_t, n_p = counts[dates[-1]], baseline(counts, dates[-1])
         if n_p and n_t / n_p < COMPLETENESS_MIN:
             con.close()
             msg = "\n".join([
                 "⚠️ <b>[US] 시세 부분 수집 의심</b>",
-                f"최신일 {dates[-1]} 심볼 {n_t:,} / 전일 {n_p:,} = {n_t/n_p:.0%} (기준 {COMPLETENESS_MIN:.0%})",
+                f"최신일 {dates[-1]} 심볼 {n_t:,} / 최근 기준 {n_p:,} = {n_t/n_p:.0%} (기준 {COMPLETENESS_MIN:.0%})",
                 "오늘 순위·점수 적재는 생략됨(반토막 유니버스 박제 방지). 로그의 '2차 수집' 줄 확인.",
                 "다음 실행에서 시세가 채워지면 자동 보충(v09) — 사람 조치 불필요."])
             return msg, dates[-1], True

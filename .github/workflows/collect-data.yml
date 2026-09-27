@@ -12,6 +12,10 @@ on:
     - cron: '17 3 * * 2-6'   # v11: 정시 혼잡 회피(17분) · 화~토 UTC = 월~금 ET 세션
   workflow_dispatch:
     inputs:
+      price_repair_dates:
+        description: '누락 시세 복구 날짜(YYYYMMDD, 콤마 구분). 시세 복구 후 빈 점수는 자동 보충'
+        required: false
+        default: ''
       repair_dates:
         # v08 2026-09-06: 부분 수집일(시세 일부 배치 누락)에 박제된 점수를 감사 로그와 함께
         #   재계산 — 수동 전용(스케줄 실행은 절대 안 씀). 예: 20260902,20260903
@@ -107,6 +111,14 @@ jobs:
           python us_earnings_collector.py
           # 3차: Form 4 내부자(분기 구조화셋, 회당 4분기 점진 백필 — ~1주에 걸쳐 완성)
           python us_insider_collector.py
+
+      - name: Repair missing prices and audit history
+        env:
+          US_DATA_DIR: ${{ github.workspace }}/us-screener-data
+          PRICE_REPAIR_DATES: ${{ github.event.inputs.price_repair_dates }}
+        run: |
+          if [ -n "$PRICE_REPAIR_DATES" ]; then python us_price_repair.py --dates "$PRICE_REPAIR_DATES"; fi
+          python us_price_repair.py --audit
 
       - name: Build page data (docs/data/us_latest.csv)
         env:

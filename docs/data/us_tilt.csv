@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,16,0.2301,1.0,29.1,32.9,198.88,20260831,50,20260925
-2,AXTI,AXT Inc - Common Stock,Technology,25,0.1008,1.0,12.7,21.1,78.94,20260831,50,20260925
-3,COHR,Coherent Corp. Common Stock,Technology,10,0.0628,1.72,-6.8,0.5,295.83,20260831,50,20260925
-4,MXL,MaxLinear  Inc - Common Stock,Technology,23,0.0825,2.16,15.7,49.0,93.84,20260831,50,20260925
-5,MRVL,Marvell Technology  Inc. - Common Stock,Technology,5,0.0534,1.35,7.2,6.9,261.94,20260831,50,20260925
-6,MU,Micron Technology  Inc. - Common Stock,Technology,14,0.0498,1.16,6.5,15.3,1082.28,20260831,50,20260925
-7,LITE,Lumentum Holdings Inc. - Common Stock,Technology,2,0.0614,1.72,1.2,0.3,941.65,20260831,50,20260925
-8,SMTC,Semtech Corporation - Common Stock,Technology,20,0.0614,1.86,-1.5,29.5,182.3,20260831,50,20260925
-9,SITM,SiTime Corporation - Common Stock,Technology,46,0.0625,2.9,7.8,10.9,662.27,20260831,50,20260925
-10,STX,Seagate Technology Holdings PLC - Ordina,Technology,8,0.0489,2.36,6.8,8.3,916.83,20260831,50,20260925
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,29,0.2301,1.0,14.1,38.2,197.28,20260831,50,20260928
+2,AXTI,AXT Inc - Common Stock,Technology,42,0.1012,1.0,-7.8,10.1,73.67,20260831,50,20260928
+3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,43,0.0537,1.28,0.1,-0.4,124.19,20260831,50,20260928
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0534,1.35,-2.1,4.3,251.9,20260831,50,20260928
+5,COHR,Coherent Corp. Common Stock,Technology,14,0.063,1.72,-12.2,-4.4,282.45,20260831,50,20260928
+6,MU,Micron Technology  Inc. - Common Stock,Technology,24,0.0499,1.16,1.0,12.7,1053.98,20260831,50,20260928
+7,LITE,Lumentum Holdings Inc. - Common Stock,Technology,3,0.0613,1.72,-3.5,-3.6,921.32,20260831,50,20260928
+8,MXL,MaxLinear  Inc - Common Stock,Technology,28,0.0813,2.16,4.7,41.9,90.0,20260831,50,20260928
+9,SMTC,Semtech Corporation - Common Stock,Technology,32,0.0615,1.86,-1.5,22.7,174.78,20260831,50,20260928
+10,PATH,UiPath  Inc. Class A Common Stock,Technology,26,0.0438,1.56,-10.3,-33.5,12.19,20260831,50,20260928

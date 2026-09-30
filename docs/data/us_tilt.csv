@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,29,0.2301,1.0,14.1,38.2,197.28,20260831,50,20260928
-2,AXTI,AXT Inc - Common Stock,Technology,42,0.1012,1.0,-7.8,10.1,73.67,20260831,50,20260928
-3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,43,0.0537,1.28,0.1,-0.4,124.19,20260831,50,20260928
-4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0534,1.35,-2.1,4.3,251.9,20260831,50,20260928
-5,COHR,Coherent Corp. Common Stock,Technology,14,0.063,1.72,-12.2,-4.4,282.45,20260831,50,20260928
-6,MU,Micron Technology  Inc. - Common Stock,Technology,24,0.0499,1.16,1.0,12.7,1053.98,20260831,50,20260928
-7,LITE,Lumentum Holdings Inc. - Common Stock,Technology,3,0.0613,1.72,-3.5,-3.6,921.32,20260831,50,20260928
-8,MXL,MaxLinear  Inc - Common Stock,Technology,28,0.0813,2.16,4.7,41.9,90.0,20260831,50,20260928
-9,SMTC,Semtech Corporation - Common Stock,Technology,32,0.0615,1.86,-1.5,22.7,174.78,20260831,50,20260928
-10,PATH,UiPath  Inc. Class A Common Stock,Technology,26,0.0438,1.56,-10.3,-33.5,12.19,20260831,50,20260928
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,27,0.2301,1.0,11.4,47.4,203.46,20260831,50,20260929
+2,AXTI,AXT Inc - Common Stock,Technology,44,0.1014,1.0,0.5,33.3,78.18,20260831,50,20260929
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0529,1.35,0.3,21.5,263.27,20260831,50,20260929
+4,COHR,Coherent Corp. Common Stock,Technology,11,0.0631,1.72,-5.9,4.7,292.21,20260831,50,20260929
+5,MU,Micron Technology  Inc. - Common Stock,Technology,22,0.0499,1.16,-2.8,14.2,1065.08,20260831,50,20260929
+6,LITE,Lumentum Holdings Inc. - Common Stock,Technology,3,0.0616,1.72,2.9,8.8,973.49,20260831,50,20260929
+7,MXL,MaxLinear  Inc - Common Stock,Technology,26,0.078,2.16,6.1,50.2,92.72,20260831,50,20260929
+8,SMTC,Semtech Corporation - Common Stock,Technology,36,0.0615,1.86,3.3,37.3,180.1,20260831,50,20260929
+9,PATH,UiPath  Inc. Class A Common Stock,Technology,30,0.0438,1.56,-7.0,-32.1,12.32,20260831,50,20260929
+10,NVT,nVent Electric plc Ordinary Shares,Industrials,39,0.0328,1.18,-0.6,8.9,161.68,20260831,50,20260929

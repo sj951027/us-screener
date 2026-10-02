@@ -87,9 +87,14 @@ jobs:
           fi
           # 주간 백업 요일을 잡 시작 시점에 고정(리뷰 L4). v11: 'ET 세션 요일'(ET 06시 이전이면 전날) — 화~토 UTC 실행과 맞춤
           # v17: 규칙은 us_calendar.py 한 곳 — `python us_calendar.py` 가 ISO 요일(월=1…일=7)을 찍는다
-          echo "RUN_DOW=$(python us_calendar.py)" >> "$GITHUB_ENV"
           # v20: 세션 날짜를 잡 시작에 한 번 고정 — 뒤쪽 스텝(옵션·애널리스트·알림)이 ET 06시를 넘겨도 같은 세션으로 판정
-          echo "US_SESSION_DATE=$(python -c 'from us_calendar import session_date; print(session_date())')" >> "$GITHUB_ENV"
+          # v22: 잡 시작 판정만 'ET 09시 이전 = 전날 세션'으로 넓힌다(정규장 개장 09:30 전). GitHub 스케줄 지연이 6시간 48분까지 늘어
+          #   10-01 실행이 ET 06:05 에 시작 → 세션이 하루 넘어가 옵션·추정치·순위 알림이 '휴장'으로 생략됐다(patch_note/v22).
+          #   us_calendar.py 의 기본값(6)은 그대로 두고(사전등록 §4 판정 기간 중 무수정) 여기서만 덮어쓴다. 요일도 같은 날짜에서 계산.
+          WF_ROLLOVER_H=9
+          SESSION=$(python -c "import us_calendar as c; c.SESSION_ROLLOVER_H=$WF_ROLLOVER_H; print(c.session_date())")
+          echo "US_SESSION_DATE=$SESSION" >> "$GITHUB_ENV"
+          echo "RUN_DOW=$(US_SESSION_DATE=$SESSION python us_calendar.py)" >> "$GITHUB_ENV"
           mkdir -p us-screener-data
           ls -la us-screener-data/ || true
 

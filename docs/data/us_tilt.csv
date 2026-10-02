@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,AXTI,AXT Inc - Common Stock,Technology,43,0.1006,1.0,6.1,27.7,77.41,20260831,50,20260930
-2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,50,0.0535,1.28,-2.4,3.3,122.84,20260831,50,20260930
-3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0518,1.35,1.3,24.8,264.21,20260831,50,20260930
-4,MU,Micron Technology  Inc. - Common Stock,Technology,9,0.048,1.16,-0.6,11.1,1065.11,20260831,50,20260930
-5,COHR,Coherent Corp. Common Stock,Technology,15,0.0626,1.72,-4.3,3.6,287.81,20260831,50,20260930
-6,LITE,Lumentum Holdings Inc. - Common Stock,Technology,5,0.061,1.72,3.7,6.2,971.26,20260831,50,20260930
-7,MXL,MaxLinear  Inc - Common Stock,Technology,31,0.0766,2.16,7.1,50.7,90.31,20260831,50,20260930
-8,SMTC,Semtech Corporation - Common Stock,Technology,33,0.0603,1.86,5.3,34.1,178.35,20260831,50,20260930
-9,PATH,UiPath  Inc. Class A Common Stock,Technology,35,0.0434,1.56,-1.5,-31.2,12.84,20260831,50,20260930
-10,NVT,nVent Electric plc Ordinary Shares,Industrials,42,0.032,1.18,-1.5,6.4,160.37,20260831,50,20260930
+1,AXTI,AXT Inc - Common Stock,Technology,22,0.0992,1.0,7.8,45.8,81.81,20260831,50,20261001
+2,SNDK,Sandisk Corporation - Common Stock When-,Technology,29,0.0723,1.0,1.9,16.3,1787.69,20260831,50,20261001
+3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,42,0.0512,1.28,-0.4,9.7,126.5,20260831,50,20261001
+4,COHR,Coherent Corp. Common Stock,Technology,11,0.063,1.72,9.8,17.3,319.19,20260831,50,20261001
+5,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0502,1.35,3.5,27.4,268.08,20260831,50,20261001
+6,MU,Micron Technology  Inc. - Common Stock,Technology,7,0.0476,1.16,1.6,17.6,1097.39,20260831,50,20261001
+7,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0604,1.72,12.6,20.3,1045.78,20260831,50,20261001
+8,MXL,MaxLinear  Inc - Common Stock,Technology,25,0.0734,2.16,8.0,60.0,92.12,20260831,50,20261001
+9,SMTC,Semtech Corporation - Common Stock,Technology,31,0.0595,1.86,6.9,41.1,186.59,20260831,50,20261001
+10,NVT,nVent Electric plc Ordinary Shares,Industrials,50,0.0316,1.18,1.8,12.5,165.77,20260831,50,20261001

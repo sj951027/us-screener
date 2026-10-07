@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,AXTI,AXT Inc - Common Stock,Technology,12,0.0976,1.0,17.6,54.2,86.66,20260831,50,20261005
-2,SNDK,Sandisk Corporation - Common Stock When-,Technology,38,0.0718,1.0,-0.5,9.6,1704.16,20260831,50,20261005
-3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,28,0.051,1.28,7.2,15.4,133.14,20260831,50,20261005
-4,COHR,Coherent Corp. Common Stock,Technology,13,0.0628,1.72,18.1,26.2,333.64,20260831,50,20261005
-5,LITE,Lumentum Holdings Inc. - Common Stock,Technology,1,0.0601,1.72,18.5,28.8,1091.67,20260831,50,20261005
-6,MU,Micron Technology  Inc. - Common Stock,Technology,17,0.0473,1.16,0.9,11.0,1063.96,20260831,50,20261005
-7,MXL,MaxLinear  Inc - Common Stock,Technology,23,0.0744,2.16,17.2,77.4,105.49,20260831,50,20261005
-8,MRVL,Marvell Technology  Inc. - Common Stock,Technology,5,0.0492,1.35,7.7,29.9,271.25,20260831,50,20261005
-9,SMTC,Semtech Corporation - Common Stock,Technology,36,0.0584,1.86,10.3,42.4,192.83,20260831,50,20261005
-10,NVT,nVent Electric plc Ordinary Shares,Industrials,50,0.0314,1.18,4.2,9.9,167.17,20260831,50,20261005
+1,AXTI,AXT Inc - Common Stock,Technology,30,0.0976,1.0,7.5,36.4,84.06,20260831,50,20261006
+2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,26,0.051,1.28,8.1,5.7,132.71,20260831,50,20261006
+3,COHR,Coherent Corp. Common Stock,Technology,11,0.0628,1.72,15.8,20.0,338.36,20260831,50,20261006
+4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,1,0.0602,1.72,16.4,28.6,1133.4,20260831,50,20261006
+5,MU,Micron Technology  Inc. - Common Stock,Technology,42,0.0473,1.16,-1.8,2.8,1045.56,20260831,50,20261006
+6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0497,1.35,9.0,28.4,287.01,20260831,50,20261006
+7,MXL,MaxLinear  Inc - Common Stock,Technology,20,0.0745,2.16,17.9,74.2,109.3,20260831,50,20261006
+8,SMTC,Semtech Corporation - Common Stock,Technology,27,0.0584,1.86,9.5,33.3,197.2,20260831,50,20261006
+9,NVT,nVent Electric plc Ordinary Shares,Industrials,36,0.0318,1.18,7.5,11.4,173.8,20260831,50,20261006
+10,STM,STMicroelectronics N.V. Common Stock,Technology,14,0.04,1.7,10.3,12.4,58.72,20260831,50,20261006

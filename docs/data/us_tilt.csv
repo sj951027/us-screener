@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,18,0.23,1.0,18.4,64.7,225.0,20260831,50,20261009
-2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,27,0.0514,1.28,-8.2,-1.1,121.01,20260831,50,20261009
-3,COHR,Coherent Corp. Common Stock,Technology,11,0.0637,1.72,-7.2,6.6,312.62,20260831,50,20261009
-4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0594,1.72,1.7,17.9,1103.35,20260831,50,20261009
-5,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0483,1.35,1.1,21.3,275.28,20260831,50,20261009
-6,MU,Micron Technology  Inc. - Common Stock,Technology,36,0.0473,1.16,-4.3,5.3,1029.0,20260831,50,20261009
-7,MXL,MaxLinear  Inc - Common Stock,Technology,20,0.0749,2.16,-9.2,38.7,96.16,20260831,50,20261009
-8,SMTC,Semtech Corporation - Common Stock,Technology,39,0.058,1.86,-3.9,17.7,187.3,20260831,50,20261009
-9,NVT,nVent Electric plc Ordinary Shares,Industrials,41,0.0321,1.18,-1.3,7.9,167.43,20260831,50,20261009
-10,STM,STMicroelectronics N.V. Common Stock,Technology,46,0.0404,1.7,-9.1,2.6,52.06,20260831,50,20261009
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,33,0.2302,1.0,5.2,48.5,213.74,20260831,50,20261012
+2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,28,0.0523,1.28,-17.1,-12.7,110.33,20260831,50,20261012
+3,COHR,Coherent Corp. Common Stock,Technology,21,0.0645,1.72,-13.7,-5.7,288.02,20260831,50,20261012
+4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0604,1.72,-8.8,7.4,995.41,20260831,50,20261012
+5,MXL,MaxLinear  Inc - Common Stock,Technology,27,0.0754,2.16,-15.6,19.3,88.99,20260831,50,20261012
+6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0485,1.35,-2.0,12.6,265.86,20260831,50,20261012
+7,NVT,nVent Electric plc Ordinary Shares,Industrials,37,0.0322,1.18,-2.6,0.2,162.78,20260831,50,20261012
+8,STX,Seagate Technology Holdings PLC - Ordina,Technology,5,0.0478,2.36,-15.1,-9.3,753.25,20260831,50,20261012
+9,VIAV,Viavi Solutions Inc. - Common Stock,Technology,35,0.0519,2.59,-11.0,7.7,41.75,20260831,50,20261012
+10,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.0381,1.58,0.0,20.4,47.53,20260831,50,20261012

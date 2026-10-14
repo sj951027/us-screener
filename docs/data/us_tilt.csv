@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,33,0.2302,1.0,5.2,48.5,213.74,20260831,50,20261012
-2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,28,0.0523,1.28,-17.1,-12.7,110.33,20260831,50,20261012
-3,COHR,Coherent Corp. Common Stock,Technology,21,0.0645,1.72,-13.7,-5.7,288.02,20260831,50,20261012
-4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0604,1.72,-8.8,7.4,995.41,20260831,50,20261012
-5,MXL,MaxLinear  Inc - Common Stock,Technology,27,0.0754,2.16,-15.6,19.3,88.99,20260831,50,20261012
-6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0485,1.35,-2.0,12.6,265.86,20260831,50,20261012
-7,NVT,nVent Electric plc Ordinary Shares,Industrials,37,0.0322,1.18,-2.6,0.2,162.78,20260831,50,20261012
-8,STX,Seagate Technology Holdings PLC - Ordina,Technology,5,0.0478,2.36,-15.1,-9.3,753.25,20260831,50,20261012
-9,VIAV,Viavi Solutions Inc. - Common Stock,Technology,35,0.0519,2.59,-11.0,7.7,41.75,20260831,50,20261012
-10,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.0381,1.58,0.0,20.4,47.53,20260831,50,20261012
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,32,0.2302,1.0,15.4,47.4,216.25,20260831,50,20261013
+2,AXTI,AXT Inc - Common Stock,Technology,46,0.096,1.0,-23.1,13.3,64.63,20260831,50,20261013
+3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,29,0.0527,1.28,-12.5,2.5,116.1,20260831,50,20261013
+4,COHR,Coherent Corp. Common Stock,Technology,9,0.0643,1.72,-14.3,8.8,289.98,20260831,50,20261013
+5,LITE,Lumentum Holdings Inc. - Common Stock,Technology,5,0.0595,1.72,-12.8,18.3,987.99,20260831,50,20261013
+6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0475,1.35,-6.4,22.8,268.73,20260831,50,20261013
+7,MXL,MaxLinear  Inc - Common Stock,Technology,28,0.0752,2.16,-18.9,36.8,88.64,20260831,50,20261013
+8,SMTC,Semtech Corporation - Common Stock,Technology,33,0.0588,1.86,-12.4,17.5,172.78,20260831,50,20261013
+9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,11,0.038,1.58,1.8,28.4,47.6,20260831,50,20261013
+10,STX,Seagate Technology Holdings PLC - Ordina,Technology,6,0.0473,2.36,-7.3,-7.2,747.2,20260831,50,20261013

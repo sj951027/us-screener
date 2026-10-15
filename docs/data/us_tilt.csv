@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,32,0.2302,1.0,15.4,47.4,216.25,20260831,50,20261013
-2,AXTI,AXT Inc - Common Stock,Technology,46,0.096,1.0,-23.1,13.3,64.63,20260831,50,20261013
-3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,29,0.0527,1.28,-12.5,2.5,116.1,20260831,50,20261013
-4,COHR,Coherent Corp. Common Stock,Technology,9,0.0643,1.72,-14.3,8.8,289.98,20260831,50,20261013
-5,LITE,Lumentum Holdings Inc. - Common Stock,Technology,5,0.0595,1.72,-12.8,18.3,987.99,20260831,50,20261013
-6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0475,1.35,-6.4,22.8,268.73,20260831,50,20261013
-7,MXL,MaxLinear  Inc - Common Stock,Technology,28,0.0752,2.16,-18.9,36.8,88.64,20260831,50,20261013
-8,SMTC,Semtech Corporation - Common Stock,Technology,33,0.0588,1.86,-12.4,17.5,172.78,20260831,50,20261013
-9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,11,0.038,1.58,1.8,28.4,47.6,20260831,50,20261013
-10,STX,Seagate Technology Holdings PLC - Ordina,Technology,6,0.0473,2.36,-7.3,-7.2,747.2,20260831,50,20261013
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,15,0.2298,1.0,15.2,57.4,226.3,20260831,50,20261014
+2,AXTI,AXT Inc - Common Stock,Technology,40,0.0942,1.0,-22.8,6.7,61.59,20260831,50,20261014
+3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,30,0.0532,1.28,-19.4,-8.1,103.31,20260831,50,20261014
+4,COHR,Coherent Corp. Common Stock,Technology,9,0.0647,1.72,-21.3,-2.9,263.32,20260831,50,20261014
+5,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0603,1.72,-19.3,6.8,896.33,20260831,50,20261014
+6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0475,1.35,-13.8,10.6,245.28,20260831,50,20261014
+7,MXL,MaxLinear  Inc - Common Stock,Technology,28,0.0736,2.16,-26.6,17.4,78.82,20260831,50,20261014
+8,SMTC,Semtech Corporation - Common Stock,Technology,31,0.0591,1.86,-17.3,6.2,160.26,20260831,50,20261014
+9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,11,0.0389,1.58,-3.1,19.4,44.33,20260831,50,20261014
+10,GLW,Corning Incorporated Common Stock,Technology,50,0.0462,2.26,-13.7,-1.9,140.89,20260831,50,20261014

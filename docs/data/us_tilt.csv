@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,15,0.2298,1.0,15.2,57.4,226.3,20260831,50,20261014
-2,AXTI,AXT Inc - Common Stock,Technology,40,0.0942,1.0,-22.8,6.7,61.59,20260831,50,20261014
-3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,30,0.0532,1.28,-19.4,-8.1,103.31,20260831,50,20261014
-4,COHR,Coherent Corp. Common Stock,Technology,9,0.0647,1.72,-21.3,-2.9,263.32,20260831,50,20261014
-5,LITE,Lumentum Holdings Inc. - Common Stock,Technology,4,0.0603,1.72,-19.3,6.8,896.33,20260831,50,20261014
-6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0475,1.35,-13.8,10.6,245.28,20260831,50,20261014
-7,MXL,MaxLinear  Inc - Common Stock,Technology,28,0.0736,2.16,-26.6,17.4,78.82,20260831,50,20261014
-8,SMTC,Semtech Corporation - Common Stock,Technology,31,0.0591,1.86,-17.3,6.2,160.26,20260831,50,20261014
-9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,11,0.0389,1.58,-3.1,19.4,44.33,20260831,50,20261014
-10,GLW,Corning Incorporated Common Stock,Technology,50,0.0462,2.26,-13.7,-1.9,140.89,20260831,50,20261014
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.2297,1.0,20.1,62.4,236.5,20260831,50,20261015
+2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,36,0.0532,1.28,-13.7,-11.1,101.36,20260831,50,20261015
+3,COHR,Coherent Corp. Common Stock,Technology,20,0.065,1.72,-17.1,-13.6,250.6,20260831,50,20261015
+4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,13,0.0603,1.72,-17.1,-5.4,869.54,20260831,50,20261015
+5,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0476,1.35,-12.2,5.0,241.24,20260831,50,20261015
+6,SMTC,Semtech Corporation - Common Stock,Technology,30,0.0605,1.86,-23.1,-13.9,144.21,20260831,50,20261015
+7,MU,Micron Technology  Inc. - Common Stock,Technology,33,0.0461,1.16,-10.1,0.5,931.24,20260831,50,20261015
+8,MXL,MaxLinear  Inc - Common Stock,Technology,25,0.0735,2.16,-16.6,12.5,78.18,20260831,50,20261015
+9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,7,0.0394,1.58,-7.4,10.4,41.89,20260831,50,20261015
+10,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0477,2.4,-15.8,7.8,271.39,20260831,50,20261015

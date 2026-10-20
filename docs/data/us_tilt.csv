@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,3,0.2299,1.0,-3.1,37.9,218.01,20260831,50,20261016
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0481,1.35,-17.2,-5.3,227.83,20260831,50,20261016
-3,COHR,Coherent Corp. Common Stock,Technology,37,0.0655,1.72,-25.5,-21.3,232.9,20260831,50,20261016
-4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,30,0.0605,1.72,-25.3,-7.8,824.13,20260831,50,20261016
-5,MXL,MaxLinear  Inc - Common Stock,Technology,39,0.0742,2.16,-25.8,-4.9,71.32,20260831,50,20261016
-6,ASX,ASE Technology Holding Co.  Ltd. America,Technology,7,0.0397,1.58,-14.9,-1.2,39.53,20260831,50,20261016
-7,TWLO,Twilio Inc. Class A Common Stock,Technology,48,0.0478,2.32,-15.6,-0.8,244.37,20260831,50,20261016
-8,GLW,Corning Incorporated Common Stock,Technology,45,0.0465,2.26,-15.8,-10.7,132.0,20260831,50,20261016
-9,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,10,0.0479,2.4,-20.5,-0.3,262.24,20260831,50,20261016
-10,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,44,0.0296,1.64,-3.7,3.9,89.7,20260831,50,20261016
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,3,0.2299,1.0,6.2,47.3,226.89,20260831,50,20261019
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0476,1.35,-10.8,-2.9,237.09,20260831,50,20261019
+3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,27,0.0594,1.72,-16.2,-10.4,834.51,20260831,50,20261019
+4,SMTC,Semtech Corporation - Common Stock,Technology,48,0.0599,1.86,-15.5,-23.1,142.22,20260831,50,20261019
+5,MXL,MaxLinear  Inc - Common Stock,Technology,36,0.0726,2.16,-13.3,-4.9,77.11,20260831,50,20261019
+6,ASST,Strive  Inc. - Class A Common Stock,Financial Services,49,0.0516,1.89,-7.8,-15.1,25.54,20260831,50,20261019
+7,ASX,ASE Technology Holding Co.  Ltd. America,Technology,7,0.0385,1.58,-14.2,-2.0,40.8,20260831,50,20261019
+8,TWLO,Twilio Inc. Class A Common Stock,Technology,20,0.0478,2.32,-9.0,5.5,257.29,20260831,50,20261019
+9,GLW,Corning Incorporated Common Stock,Technology,41,0.0458,2.26,-9.9,-11.6,132.74,20260831,50,20261019
+10,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0476,2.4,-13.2,-3.7,265.79,20260831,50,20261019

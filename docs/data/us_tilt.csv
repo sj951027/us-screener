@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,3,0.2299,1.0,6.2,47.3,226.89,20260831,50,20261019
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0476,1.35,-10.8,-2.9,237.09,20260831,50,20261019
-3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,27,0.0594,1.72,-16.2,-10.4,834.51,20260831,50,20261019
-4,SMTC,Semtech Corporation - Common Stock,Technology,48,0.0599,1.86,-15.5,-23.1,142.22,20260831,50,20261019
-5,MXL,MaxLinear  Inc - Common Stock,Technology,36,0.0726,2.16,-13.3,-4.9,77.11,20260831,50,20261019
-6,ASST,Strive  Inc. - Class A Common Stock,Financial Services,49,0.0516,1.89,-7.8,-15.1,25.54,20260831,50,20261019
-7,ASX,ASE Technology Holding Co.  Ltd. America,Technology,7,0.0385,1.58,-14.2,-2.0,40.8,20260831,50,20261019
-8,TWLO,Twilio Inc. Class A Common Stock,Technology,20,0.0478,2.32,-9.0,5.5,257.29,20260831,50,20261019
-9,GLW,Corning Incorporated Common Stock,Technology,41,0.0458,2.26,-9.9,-11.6,132.74,20260831,50,20261019
-10,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0476,2.4,-13.2,-3.7,265.79,20260831,50,20261019
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,3,0.2298,1.0,11.9,40.0,242.08,20260831,50,20261020
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0476,1.35,-10.5,-6.6,240.42,20260831,50,20261020
+3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,28,0.0594,1.72,-16.7,-13.8,822.51,20260831,50,20261020
+4,OKTA,Okta  Inc. - Class A Common Stock,Technology,31,0.0495,1.66,-14.4,1.4,194.02,20260831,50,20261020
+5,ASST,Strive  Inc. - Class A Common Stock,Financial Services,29,0.0518,1.89,-1.9,-10.8,27.06,20260831,50,20261020
+6,ASX,ASE Technology Holding Co.  Ltd. America,Technology,14,0.0385,1.58,-14.3,-6.8,40.77,20260831,50,20261020
+7,TWLO,Twilio Inc. Class A Common Stock,Technology,13,0.0469,2.32,-8.1,-2.8,258.69,20260831,50,20261020
+8,GLW,Corning Incorporated Common Stock,Technology,38,0.0454,2.26,-11.0,-16.8,132.26,20260831,50,20261020
+9,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0476,2.4,-14.8,-5.8,262.93,20260831,50,20261020
+10,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,45,0.0291,1.64,-11.2,6.7,88.19,20260831,50,20261020

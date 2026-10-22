@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,3,0.2298,1.0,11.9,40.0,242.08,20260831,50,20261020
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,6,0.0476,1.35,-10.5,-6.6,240.42,20260831,50,20261020
-3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,28,0.0594,1.72,-16.7,-13.8,822.51,20260831,50,20261020
-4,OKTA,Okta  Inc. - Class A Common Stock,Technology,31,0.0495,1.66,-14.4,1.4,194.02,20260831,50,20261020
-5,ASST,Strive  Inc. - Class A Common Stock,Financial Services,29,0.0518,1.89,-1.9,-10.8,27.06,20260831,50,20261020
-6,ASX,ASE Technology Holding Co.  Ltd. America,Technology,14,0.0385,1.58,-14.3,-6.8,40.77,20260831,50,20261020
-7,TWLO,Twilio Inc. Class A Common Stock,Technology,13,0.0469,2.32,-8.1,-2.8,258.69,20260831,50,20261020
-8,GLW,Corning Incorporated Common Stock,Technology,38,0.0454,2.26,-11.0,-16.8,132.26,20260831,50,20261020
-9,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0476,2.4,-14.8,-5.8,262.93,20260831,50,20261020
-10,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,45,0.0291,1.64,-11.2,6.7,88.19,20260831,50,20261020
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,2,0.2297,1.0,8.6,34.6,245.81,20260831,50,20261021
+2,LITE,Lumentum Holdings Inc. - Common Stock,Technology,34,0.0595,1.72,-5.1,-10.0,850.7,20260831,50,20261021
+3,OKTA,Okta  Inc. - Class A Common Stock,Technology,19,0.0502,1.66,-1.5,6.1,208.64,20260831,50,20261021
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0477,1.35,-0.2,-6.7,244.76,20260831,50,20261021
+5,ASST,Strive  Inc. - Class A Common Stock,Financial Services,27,0.0535,1.89,24.6,4.8,30.75,20260831,50,20261021
+6,SITM,SiTime Corporation - Common Stock,Technology,40,0.0603,2.9,-3.0,-19.6,509.2,20260831,50,20261021
+7,MDB,MongoDB  Inc. - Class A Common Stock,Technology,45,0.0476,2.29,9.7,-8.6,390.75,20260831,50,20261021
+8,ASX,ASE Technology Holding Co.  Ltd. America,Technology,9,0.0387,1.58,-4.3,-6.2,42.41,20260831,50,20261021
+9,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0478,2.4,-6.3,-2.4,273.05,20260831,50,20261021
+10,TWLO,Twilio Inc. Class A Common Stock,Technology,14,0.047,2.32,-1.6,-6.3,266.68,20260831,50,20261021

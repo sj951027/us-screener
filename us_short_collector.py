@@ -56,10 +56,17 @@ def candidate_dates(start, end):
     return out
 
 
+def split_fields(line, delim):
+    """한 줄을 칸으로 나눈다 — v23: FINRA 가 2026-09-15 결제분부터 모든 칸을 큰따옴표로 감싸기 시작했다
+    ("20260930"|"A"|…|"2026-09-30"). 따옴표를 그대로 두면 결제일이 '"2026093', 심볼이 '"A"', 수량은 None 으로 적재된다
+    (실측: 정본 0915·0930 두 파일 45,176행이 그렇게 들어가 MAX(settlement_date) 가 0831 에 멈춤)."""
+    return [c.strip().strip('"').strip() for c in line.split(delim)]
+
+
 def detect_columns(header_line):
     """구분자·컬럼 인덱스 자동 감지. 실패 시 None."""
     delim = "|" if header_line.count("|") >= header_line.count(",") else ","
-    cols = [c.strip().lower().replace(" ", "").replace("_", "") for c in header_line.split(delim)]
+    cols = [c.lower().replace(" ", "").replace("_", "") for c in split_fields(header_line, delim)]
     def find(*keys):
         for i, c in enumerate(cols):
             if any(k in c for k in keys):
@@ -87,7 +94,7 @@ def parse_file(text, fallback_date):
         return None
     rows = []
     for line in lines[1:]:
-        f = line.split(delim)
+        f = split_fields(line, delim)
         if len(f) <= m["qty"]:
             continue
         def g(key, cast=str):
@@ -111,6 +118,25 @@ def parse_file(text, fallback_date):
     return rows
 
 
+DATE8 = "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]"
+
+
+def requeue_malformed(con):
+    """v23: 따옴표 파싱 사고로 '완료' 표기됐지만 정상 결제일 행이 0인 파일을 완료 목록에서 빼 다음 탐침에서 다시 받게 한다.
+    잘못 들어간 행('"2026093' 같은 결제일)은 지우지 않는다 — short_interest 는 추가 전용(us_integrity 행수 감소 → 업로드 차단)이고,
+    8자리 결제일이 다시 들어오면 MAX(settlement_date)·틸트 조회가 그쪽을 집으므로 무해하다(정리는 판정 기간 뒤 백로그).
+    반환: 다시 받을 날짜 목록."""
+    good = {d for (d,) in con.execute(
+        f"SELECT DISTINCT settlement_date FROM short_interest WHERE settlement_date GLOB '{DATE8}'")}
+    bad_dates = [d for (d,) in con.execute("SELECT date FROM short_files_done ORDER BY date") if d not in good]
+    if bad_dates:
+        n_bad = con.execute(f"SELECT COUNT(*) FROM short_interest WHERE NOT settlement_date GLOB '{DATE8}'").fetchone()[0]
+        con.executemany("DELETE FROM short_files_done WHERE date=?", [(d,) for d in bad_dates])
+        con.commit()
+        print(f"  ↻ 완료 표기됐으나 정상 행 0 인 결제일 {bad_dates} 를 다시 받는다(형식 불량 행 {n_bad:,}개는 보존)")
+    return bad_dates
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backfill-from", default=None, help="예: 2023-06-01 (1회)")
@@ -120,6 +146,7 @@ def main():
     con = sqlite3.connect(DB)
     for d in DDL:
         con.execute(d)
+    requeue_malformed(con)
     done = {d for (d,) in con.execute("SELECT date FROM short_files_done")}
     today = dt.date.today()
     if args.backfill_from:

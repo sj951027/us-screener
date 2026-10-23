@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,AXTI,AXT Inc - Common Stock,Technology,30,0.0976,1.0,7.5,36.4,84.06,20260831,50,20261006
-2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,26,0.051,1.28,8.1,5.7,132.71,20260831,50,20261006
-3,COHR,Coherent Corp. Common Stock,Technology,11,0.0628,1.72,15.8,20.0,338.36,20260831,50,20261006
-4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,1,0.0602,1.72,16.4,28.6,1133.4,20260831,50,20261006
-5,MU,Micron Technology  Inc. - Common Stock,Technology,42,0.0473,1.16,-1.8,2.8,1045.56,20260831,50,20261006
-6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0497,1.35,9.0,28.4,287.01,20260831,50,20261006
-7,MXL,MaxLinear  Inc - Common Stock,Technology,20,0.0745,2.16,17.9,74.2,109.3,20260831,50,20261006
-8,SMTC,Semtech Corporation - Common Stock,Technology,27,0.0584,1.86,9.5,33.3,197.2,20260831,50,20261006
-9,NVT,nVent Electric plc Ordinary Shares,Industrials,36,0.0318,1.18,7.5,11.4,173.8,20260831,50,20261006
-10,STM,STMicroelectronics N.V. Common Stock,Technology,14,0.04,1.7,10.3,12.4,58.72,20260831,50,20261006
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,2,0.231,1.0,-14.3,11.3,202.63,20260831,50,20261022
+2,LITE,Lumentum Holdings Inc. - Common Stock,Technology,34,0.0604,1.72,-13.5,-19.7,752.54,20260831,50,20261022
+3,ASST,Strive  Inc. - Class A Common Stock,Financial Services,24,0.0536,1.89,13.2,0.1,29.03,20260831,50,20261022
+4,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0481,1.35,-7.4,-14.3,223.47,20260831,50,20261022
+5,OKTA,Okta  Inc. - Class A Common Stock,Technology,31,0.0505,1.66,-3.4,-2.0,201.33,20260831,50,20261022
+6,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0514,2.4,-15.4,-16.7,229.73,20260831,50,20261022
+7,SITM,SiTime Corporation - Common Stock,Technology,45,0.0612,2.9,-7.7,-24.0,462.72,20260831,50,20261022
+8,MDB,MongoDB  Inc. - Class A Common Stock,Technology,38,0.0486,2.29,-1.2,-15.4,362.24,20260831,50,20261022
+9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,9,0.0403,1.58,-9.9,-14.1,37.74,20260831,50,20261022
+10,GLW,Corning Incorporated Common Stock,Technology,49,0.046,2.26,-10.4,-19.7,123.99,20260831,50,20261022

@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,LITE,Lumentum Holdings Inc. - Common Stock,Technology,16,0.0597,1.5,-8.2,-18.6,756.17,20260930,50,20261023
-2,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.2311,1.83,-8.2,2.7,200.1,20260930,50,20261023
-3,SMTC,Semtech Corporation - Common Stock,Technology,38,0.0612,1.71,-3.5,-24.4,132.0,20260930,50,20261023
-4,DELL,Dell Technologies Inc. Class C Common St,Technology,18,0.0496,1.44,1.2,-14.7,456.44,20260930,50,20261023
-5,P,Everpure  Inc. Class A common stock,Technology,45,0.0461,1.0,-0.5,1.2,123.33,20260930,50,20261023
-6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.048,1.43,0.3,-11.7,228.51,20260930,50,20261023
-7,MU,Micron Technology  Inc. - Common Stock,Technology,39,0.0438,1.06,-0.1,-18.8,877.55,20260930,50,20261023
-8,TTMI,TTM Technologies  Inc. - Common Stock,Technology,28,0.0635,2.13,-14.7,-36.9,80.11,20260930,50,20261023
-9,OKTA,Okta  Inc. - Class A Common Stock,Technology,17,0.0508,1.9,13.8,3.1,213.05,20260930,50,20261023
-10,STX,Seagate Technology Holdings PLC - Ordina,Technology,41,0.0446,1.79,-1.3,-30.4,630.49,20260930,50,20261023
+1,AXTI,AXT Inc - Common Stock,Technology,39,0.0939,1.21,-0.9,-28.7,56.27,20260930,50,20261026
+2,COHR,Coherent Corp. Common Stock,Technology,34,0.0637,1.67,-4.5,-25.1,221.5,20260930,50,20261026
+3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,9,0.0595,1.5,-2.0,-13.1,818.1,20260930,50,20261026
+4,MRNA,Moderna  Inc. - Common Stock,Healthcare,8,0.2311,1.83,-12.4,-0.0,198.85,20260930,50,20261026
+5,SMTC,Semtech Corporation - Common Stock,Technology,26,0.0603,1.71,-3.9,-25.0,136.73,20260930,50,20261026
+6,DELL,Dell Technologies Inc. Class C Common St,Technology,11,0.0485,1.44,2.7,-16.9,467.09,20260930,50,20261026
+7,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.0469,1.43,-1.4,-10.7,233.78,20260930,50,20261026
+8,MU,Micron Technology  Inc. - Common Stock,Technology,23,0.0425,1.06,-0.1,-16.5,903.7,20260930,50,20261026
+9,TTMI,TTM Technologies  Inc. - Common Stock,Technology,24,0.0624,2.13,-13.7,-33.8,85.5,20260930,50,20261026
+10,OKTA,Okta  Inc. - Class A Common Stock,Technology,16,0.0509,1.9,15.8,12.7,220.01,20260930,50,20261026

@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,AXTI,AXT Inc - Common Stock,Technology,28,0.0921,1.21,2.0,-21.0,58.23,20260930,50,20261027
-2,MXL,MaxLinear  Inc - Common Stock,Technology,47,0.0693,1.49,1.6,-17.0,74.67,20260930,50,20261027
-3,COHR,Coherent Corp. Common Stock,Technology,27,0.0632,1.67,1.7,-16.5,235.79,20260930,50,20261027
-4,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.231,1.83,-14.1,5.4,207.97,20260930,50,20261027
-5,LITE,Lumentum Holdings Inc. - Common Stock,Technology,5,0.0589,1.5,5.3,-6.0,866.18,20260930,50,20261027
-6,SMTC,Semtech Corporation - Common Stock,Technology,18,0.0599,1.71,6.0,-17.4,144.35,20260930,50,20261027
-7,P,Everpure  Inc. Class A common stock,Technology,50,0.0462,1.0,9.7,7.2,138.73,20260930,50,20261027
-8,DELL,Dell Technologies Inc. Class C Common St,Technology,6,0.0486,1.44,8.8,-7.5,501.96,20260930,50,20261027
-9,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.0462,1.43,1.3,-3.3,243.57,20260930,50,20261027
-10,MU,Micron Technology  Inc. - Common Stock,Technology,16,0.0406,1.06,3.6,-11.9,928.76,20260930,50,20261027
+1,AXTI,AXT Inc - Common Stock,Technology,22,0.0869,1.21,8.6,-17.7,64.38,20260930,50,20261028
+2,MXL,MaxLinear  Inc - Common Stock,Technology,41,0.0661,1.49,-0.9,-19.0,75.14,20260930,50,20261028
+3,COHR,Coherent Corp. Common Stock,Technology,23,0.0613,1.67,0.9,-18.0,239.59,20260930,50,20261028
+4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,5,0.0563,1.5,7.4,-6.1,913.95,20260930,50,20261028
+5,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.231,1.83,-12.9,5.3,214.16,20260930,50,20261028
+6,SMTC,Semtech Corporation - Common Stock,Technology,18,0.0585,1.71,3.8,-18.4,146.97,20260930,50,20261028
+7,P,Everpure  Inc. Class A common stock,Technology,50,0.0453,1.0,5.9,6.6,138.6,20260930,50,20261028
+8,DELL,Dell Technologies Inc. Class C Common St,Technology,16,0.0473,1.44,1.6,-8.4,493.79,20260930,50,20261028
+9,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.044,1.43,2.8,-4.4,251.65,20260930,50,20261028
+10,TTMI,TTM Technologies  Inc. - Common Stock,Technology,19,0.0597,2.13,-11.1,-26.1,90.79,20260930,50,20261028

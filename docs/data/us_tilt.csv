@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,LITE,Lumentum Holdings Inc. - Common Stock,Technology,10,0.0563,1.5,11.2,-19.6,840.7,20260930,50,20261030
-2,SMTC,Semtech Corporation - Common Stock,Technology,45,0.0601,1.71,-3.5,-31.7,127.38,20260930,50,20261030
-3,P,Everpure  Inc. Class A common stock,Technology,49,0.0464,1.0,3.0,-5.3,126.98,20260930,50,20261030
-4,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.2307,1.83,10.8,17.3,221.72,20260930,50,20261030
-5,MRVL,Marvell Technology  Inc. - Common Stock,Technology,2,0.0489,1.43,-14.1,-26.7,196.4,20260930,50,20261030
-6,MU,Micron Technology  Inc. - Common Stock,Technology,20,0.0347,1.06,0.8,-19.4,884.74,20260930,50,20261030
-7,OKTA,Okta  Inc. - Class A Common Stock,Technology,40,0.0517,1.9,-2.3,-2.1,208.24,20260930,50,20261030
-8,ILMN,Illumina  Inc. - Common Stock,Healthcare,5,0.0404,1.63,-12.4,-11.2,235.99,20260930,50,20261030
-9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,7,0.0385,1.55,2.1,-11.7,39.5,20260930,50,20261030
-10,TTMI,TTM Technologies  Inc. - Common Stock,Technology,25,0.0598,2.13,3.5,-34.4,82.94,20260930,50,20261030
+1,LITE,Lumentum Holdings Inc. - Common Stock,Technology,16,0.06,1.52,-16.3,-36.9,684.4,20261015,50,20261102
+2,TWLO,Twilio Inc. Class A Common Stock,Technology,33,0.0518,1.09,-21.3,-29.5,207.6,20261015,50,20261102
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,3,0.0488,1.08,-26.7,-37.0,171.41,20261015,50,20261102
+4,MRNA,Moderna  Inc. - Common Stock,Healthcare,5,0.2308,1.78,11.1,16.2,220.83,20261015,50,20261102
+5,TTMI,TTM Technologies  Inc. - Common Stock,Technology,30,0.0591,1.69,-10.4,-41.9,76.58,20261015,50,20261102
+6,STX,Seagate Technology Holdings PLC - Ordina,Technology,41,0.0434,1.39,-7.8,-30.1,593.76,20261015,50,20261102
+7,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.05,1.73,-8.8,-30.9,222.18,20261015,50,20261102
+8,MU,Micron Technology  Inc. - Common Stock,Technology,37,0.0341,1.0,-7.8,-22.4,833.59,20261015,50,20261102
+9,P,Everpure  Inc. Class A common stock,Technology,38,0.0482,1.91,-13.4,-18.8,113.78,20261015,50,20261102
+10,TXG,10x Genomics  Inc. - Common Stock,Healthcare,7,0.0566,2.65,-15.5,-34.1,61.63,20261015,50,20261102

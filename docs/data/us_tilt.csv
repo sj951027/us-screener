@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,LITE,Lumentum Holdings Inc. - Common Stock,Technology,20,0.0599,1.52,-21.5,-37.7,680.16,20261015,50,20261103
-2,TWLO,Twilio Inc. Class A Common Stock,Technology,27,0.0519,1.09,-16.0,-29.0,213.77,20261015,50,20261103
-3,SMTC,Semtech Corporation - Common Stock,Technology,42,0.0591,1.55,-11.7,-33.9,127.42,20261015,50,20261103
-4,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.2307,1.78,9.8,12.4,228.44,20261015,50,20261103
-5,TTMI,TTM Technologies  Inc. - Common Stock,Technology,26,0.0598,1.69,-5.9,-38.7,81.63,20261015,50,20261103
-6,MRVL,Marvell Technology  Inc. - Common Stock,Technology,2,0.0486,1.08,-29.4,-36.6,171.97,20261015,50,20261103
-7,STX,Seagate Technology Holdings PLC - Ordina,Technology,25,0.0436,1.39,-9.2,-31.6,606.38,20261015,50,20261103
-8,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,6,0.0504,1.73,-7.9,-28.3,235.49,20261015,50,20261103
-9,MU,Micron Technology  Inc. - Common Stock,Technology,43,0.0343,1.0,-7.9,-19.6,855.1,20261015,50,20261103
-10,DELL,Dell Technologies Inc. Class C Common St,Technology,47,0.049,1.81,-18.6,-26.0,408.4,20261015,50,20261103
+1,TWLO,Twilio Inc. Class A Common Stock,Technology,27,0.0519,1.09,-15.9,-23.9,213.5,20261015,50,20261104
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,2,0.0494,1.08,-36.5,-44.3,159.8,20261015,50,20261104
+3,LITE,Lumentum Holdings Inc. - Common Stock,Technology,41,0.0607,1.52,-31.4,-44.7,626.75,20261015,50,20261104
+4,TTMI,TTM Technologies  Inc. - Common Stock,Technology,36,0.0608,1.69,-19.2,-44.7,73.38,20261015,50,20261104
+5,MRNA,Moderna  Inc. - Common Stock,Healthcare,1,0.2308,1.78,20.6,37.8,258.38,20261015,50,20261104
+6,STX,Seagate Technology Holdings PLC - Ordina,Technology,46,0.0445,1.39,-20.2,-30.9,557.06,20261015,50,20261104
+7,DELL,Dell Technologies Inc. Class C Common St,Technology,44,0.0497,1.81,-24.6,-35.0,372.36,20261015,50,20261104
+8,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,6,0.0468,1.73,-10.7,-33.5,233.13,20261015,50,20261104
+9,MU,Micron Technology  Inc. - Common Stock,Technology,40,0.0354,1.0,-19.1,-23.9,795.23,20261015,50,20261104
+10,OKTA,Okta  Inc. - Class A Common Stock,Technology,18,0.0536,2.42,-14.2,-12.6,191.05,20261015,50,20261104

@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0531,1.08,-38.8,-53.1,133.55,20261015,50,20261105
-2,TTMI,TTM Technologies  Inc. - Common Stock,Technology,42,0.0634,1.69,-29.0,-51.5,62.22,20261015,50,20261105
-3,MRNA,Moderna  Inc. - Common Stock,Healthcare,3,0.231,1.78,8.4,22.9,241.46,20261015,50,20261105
-4,STX,Seagate Technology Holdings PLC - Ordina,Technology,32,0.0485,1.39,-33.4,-42.2,466.53,20261015,50,20261105
-5,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0518,1.73,-24.6,-43.3,190.35,20261015,50,20261105
-6,ASX,ASE Technology Holding Co.  Ltd. America,Technology,12,0.046,1.66,-33.3,-35.1,29.72,20261015,50,20261105
-7,MU,Micron Technology  Inc. - Common Stock,Technology,30,0.0416,1.0,-29.7,-39.7,656.39,20261015,50,20261105
-8,P,Everpure  Inc. Class A common stock,Technology,24,0.053,1.91,-31.9,-38.8,93.44,20261015,50,20261105
-9,TWLO,Twilio Inc. Class A Common Stock,Technology,34,0.0418,1.09,-16.9,-26.4,200.96,20261015,50,20261105
-10,OKTA,Okta  Inc. - Class A Common Stock,Technology,25,0.0552,2.42,-22.9,-21.5,171.16,20261015,50,20261105
+1,LITE,Lumentum Holdings Inc. - Common Stock,Technology,33,0.0641,1.52,-35.9,-48.6,538.59,20261015,50,20261106
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.0534,1.08,-28.1,-48.6,141.2,20261015,50,20261106
+3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,41,0.0639,1.69,-19.8,-43.4,66.51,20261015,50,20261106
+4,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.231,1.78,14.6,29.0,254.19,20261015,50,20261106
+5,STX,Seagate Technology Holdings PLC - Ordina,Technology,38,0.0485,1.39,-28.5,-40.5,460.99,20261015,50,20261106
+6,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0536,1.73,-10.0,-34.5,210.98,20261015,50,20261106
+7,SIMO,Silicon Motion Technology Corporation - ,Technology,40,0.0587,2.14,-21.7,-37.7,162.76,20261015,50,20261106
+8,MU,Micron Technology  Inc. - Common Stock,Technology,16,0.0421,1.0,-22.0,-33.4,690.0,20261015,50,20261106
+9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,13,0.0467,1.66,-19.9,-30.1,31.63,20261015,50,20261106
+10,VIAV,Viavi Solutions Inc. - Common Stock,Technology,46,0.0558,2.23,-4.8,-35.4,28.47,20261015,50,20261106

@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,LITE,Lumentum Holdings Inc. - Common Stock,Technology,33,0.0641,1.52,-35.9,-48.6,538.59,20261015,50,20261106
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.0534,1.08,-28.1,-48.6,141.2,20261015,50,20261106
-3,TTMI,TTM Technologies  Inc. - Common Stock,Technology,41,0.0639,1.69,-19.8,-43.4,66.51,20261015,50,20261106
-4,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.231,1.78,14.6,29.0,254.19,20261015,50,20261106
-5,STX,Seagate Technology Holdings PLC - Ordina,Technology,38,0.0485,1.39,-28.5,-40.5,460.99,20261015,50,20261106
-6,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,8,0.0536,1.73,-10.0,-34.5,210.98,20261015,50,20261106
-7,SIMO,Silicon Motion Technology Corporation - ,Technology,40,0.0587,2.14,-21.7,-37.7,162.76,20261015,50,20261106
-8,MU,Micron Technology  Inc. - Common Stock,Technology,16,0.0421,1.0,-22.0,-33.4,690.0,20261015,50,20261106
-9,ASX,ASE Technology Holding Co.  Ltd. America,Technology,13,0.0467,1.66,-19.9,-30.1,31.63,20261015,50,20261106
-10,VIAV,Viavi Solutions Inc. - Common Stock,Technology,46,0.0558,2.23,-4.8,-35.4,28.47,20261015,50,20261106
+1,XP,XP Inc. - Class A Common Stock,Financial Services,31,0.0786,1.44,10.2,-52.0,15.47,20261015,50,20261109
+2,SMTC,Semtech Corporation - Common Stock,Technology,40,0.0672,1.55,-4.8,-37.8,116.45,20261015,50,20261109
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,1,0.0548,1.08,-9.8,-43.8,154.6,20261015,50,20261109
+4,LITE,Lumentum Holdings Inc. - Common Stock,Technology,35,0.0656,1.52,-12.9,-46.0,596.16,20261015,50,20261109
+5,MRNA,Moderna  Inc. - Common Stock,Healthcare,4,0.231,1.78,21.8,19.6,269.0,20261015,50,20261109
+6,TTMI,TTM Technologies  Inc. - Common Stock,Technology,42,0.0663,1.69,-1.6,-37.7,75.33,20261015,50,20261109
+7,STX,Seagate Technology Holdings PLC - Ordina,Technology,44,0.0501,1.39,-14.8,-35.4,506.14,20261015,50,20261109
+8,MU,Micron Technology  Inc. - Common Stock,Technology,17,0.0429,1.0,-12.0,-28.7,733.15,20261015,50,20261109
+9,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,9,0.0548,1.73,3.5,-30.3,230.0,20261015,50,20261109
+10,SIMO,Silicon Motion Technology Corporation - ,Technology,28,0.0591,2.14,-8.2,-34.6,172.01,20261015,50,20261109

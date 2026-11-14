@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,4,0.0561,1.08,23.1,-33.0,164.45,20261015,50,20261112
-2,XP,XP Inc. - Class A Common Stock,Financial Services,42,0.079,1.44,1.8,-50.7,15.04,20261015,50,20261112
-3,MRNA,Moderna  Inc. - Common Stock,Healthcare,8,0.2317,1.78,-4.2,2.2,231.35,20261015,50,20261112
-4,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,16,0.0561,1.73,29.1,-15.6,245.76,20261015,50,20261112
-5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,12,0.049,1.66,22.1,-18.1,36.29,20261015,50,20261112
-6,TWLO,Twilio Inc. Class A Common Stock,Technology,20,0.0415,1.09,5.6,-21.7,212.21,20261015,50,20261112
-7,P,Everpure  Inc. Class A common stock,Technology,28,0.0505,1.91,17.8,-22.2,110.1,20261015,50,20261112
-8,OKTA,Okta  Inc. - Class A Common Stock,Technology,9,0.0548,2.42,6.6,-13.9,182.54,20261015,50,20261112
-9,TXG,10x Genomics  Inc. - Common Stock,Healthcare,13,0.0567,2.65,1.8,-19.2,59.1,20261015,50,20261112
-10,STM,STMicroelectronics N.V. Common Stock,Technology,10,0.0366,1.11,16.3,-0.9,46.46,20261015,50,20261112
+1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,8,0.0558,1.08,11.0,-35.0,156.76,20261015,50,20261113
+2,XP,XP Inc. - Class A Common Stock,Financial Services,22,0.079,1.44,2.3,-48.4,15.49,20261015,50,20261113
+3,MRNA,Moderna  Inc. - Common Stock,Healthcare,12,0.2319,1.78,-12.1,-5.6,223.37,20261015,50,20261113
+4,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,24,0.0563,1.73,10.0,-14.5,232.06,20261015,50,20261113
+5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,19,0.0491,1.66,12.4,-15.1,35.55,20261015,50,20261113
+6,TWLO,Twilio Inc. Class A Common Stock,Technology,17,0.0412,1.09,4.5,-22.7,211.21,20261015,50,20261113
+7,P,Everpure  Inc. Class A common stock,Technology,37,0.0505,1.91,11.6,-19.0,107.99,20261015,50,20261113
+8,OKTA,Okta  Inc. - Class A Common Stock,Technology,3,0.0546,2.42,8.4,-12.3,182.87,20261015,50,20261113
+9,TXG,10x Genomics  Inc. - Common Stock,Healthcare,11,0.0566,2.65,-1.8,-19.6,58.19,20261015,50,20261113
+10,AMD,Advanced Micro Devices  Inc. - Common St,Technology,5,0.0502,1.98,18.9,-5.0,534.06,20261015,50,20261113

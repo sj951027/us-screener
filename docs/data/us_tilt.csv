@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,8,0.0558,1.08,11.0,-35.0,156.76,20261015,50,20261113
-2,XP,XP Inc. - Class A Common Stock,Financial Services,22,0.079,1.44,2.3,-48.4,15.49,20261015,50,20261113
-3,MRNA,Moderna  Inc. - Common Stock,Healthcare,12,0.2319,1.78,-12.1,-5.6,223.37,20261015,50,20261113
-4,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,24,0.0563,1.73,10.0,-14.5,232.06,20261015,50,20261113
-5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,19,0.0491,1.66,12.4,-15.1,35.55,20261015,50,20261113
-6,TWLO,Twilio Inc. Class A Common Stock,Technology,17,0.0412,1.09,4.5,-22.7,211.21,20261015,50,20261113
-7,P,Everpure  Inc. Class A common stock,Technology,37,0.0505,1.91,11.6,-19.0,107.99,20261015,50,20261113
-8,OKTA,Okta  Inc. - Class A Common Stock,Technology,3,0.0546,2.42,8.4,-12.3,182.87,20261015,50,20261113
-9,TXG,10x Genomics  Inc. - Common Stock,Healthcare,11,0.0566,2.65,-1.8,-19.6,58.19,20261015,50,20261113
-10,AMD,Advanced Micro Devices  Inc. - Common St,Technology,5,0.0502,1.98,18.9,-5.0,534.06,20261015,50,20261113
+1,XP,XP Inc. - Class A Common Stock,Financial Services,35,0.0792,1.0,-4.1,-49.3,14.83,20261030,50,20261116
+2,MRNA,Moderna  Inc. - Common Stock,Healthcare,10,0.2319,1.76,-20.0,-1.3,215.27,20261030,50,20261116
+3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,7,0.0557,1.21,-6.0,-36.2,145.36,20261030,50,20261116
+4,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,20,0.0551,1.84,-4.2,-15.9,220.44,20261030,50,20261116
+5,ASX,ASE Technology Holding Co.  Ltd. America,Technology,16,0.0488,1.18,-4.5,-17.0,32.8,20261030,50,20261116
+6,STM,STMicroelectronics N.V. Common Stock,Technology,8,0.036,1.0,-0.0,-1.9,44.53,20261030,50,20261116
+7,OKTA,Okta  Inc. - Class A Common Stock,Technology,6,0.0548,1.94,0.4,-4.8,178.22,20261030,50,20261116
+8,AMD,Advanced Micro Devices  Inc. - Common St,Technology,3,0.0504,1.86,-0.8,-4.6,504.28,20261030,50,20261116
+9,TWLO,Twilio Inc. Class A Common Stock,Technology,29,0.0418,1.92,-3.5,-18.4,199.42,20261030,50,20261116
+10,KEYS,Keysight Technologies Inc. Common Stock,Technology,44,0.0318,1.61,-1.2,-13.8,285.63,20261030,50,20261116

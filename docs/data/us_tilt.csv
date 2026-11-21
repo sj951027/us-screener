@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,14,0.0586,1.76,-13.8,-18.9,199.33,20261030,50,20261119
-2,DELL,Dell Technologies Inc. Class C Common St,Technology,30,0.0548,1.7,-15.8,-35.7,312.54,20261030,50,20261119
-3,MRVL,Marvell Technology  Inc. - Common Stock,Technology,9,0.0536,1.21,-15.8,-43.4,138.47,20261030,50,20261119
-4,ASX,ASE Technology Holding Co.  Ltd. America,Technology,12,0.0494,1.18,-16.0,-28.1,30.49,20261030,50,20261119
-5,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,20,0.0545,1.84,-11.1,-20.0,218.55,20261030,50,20261119
-6,OKTA,Okta  Inc. - Class A Common Stock,Technology,2,0.0566,1.94,13.3,-0.9,206.85,20261030,50,20261119
-7,ALAB,Astera Labs  Inc. - Common Stock,Technology,26,0.062,2.16,-7.1,-27.0,211.6,20261030,50,20261119
-8,STX,Seagate Technology Holdings PLC - Ordina,Technology,37,0.0482,1.44,-4.4,-25.2,521.39,20261030,50,20261119
-9,AMD,Advanced Micro Devices  Inc. - Common St,Technology,5,0.0516,1.86,-16.4,-11.5,489.19,20261030,50,20261119
-10,SMTC,Semtech Corporation - Common Stock,Technology,45,0.0652,2.53,-14.8,-28.1,101.81,20261030,50,20261119
+1,MRNA,Moderna  Inc. - Common Stock,Healthcare,12,0.0583,1.76,-12.7,-3.8,195.0,20261030,50,20261120
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,9,0.0552,1.21,-22.0,-45.3,122.28,20261030,50,20261120
+3,DELL,Dell Technologies Inc. Class C Common St,Technology,23,0.0564,1.7,-19.3,-38.6,278.02,20261030,50,20261120
+4,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.0524,1.18,-26.1,-30.4,26.27,20261030,50,20261120
+5,OKTA,Okta  Inc. - Class A Common Stock,Technology,2,0.0573,1.94,4.7,-4.9,191.46,20261030,50,20261120
+6,STX,Seagate Technology Holdings PLC - Ordina,Technology,26,0.0499,1.44,-13.5,-28.8,457.01,20261030,50,20261120
+7,ALAB,Astera Labs  Inc. - Common Stock,Technology,27,0.0645,2.16,-18.7,-30.0,180.35,20261030,50,20261120
+8,AMD,Advanced Micro Devices  Inc. - Common St,Technology,4,0.0541,1.86,-20.5,-16.4,424.39,20261030,50,20261120
+9,STM,STMicroelectronics N.V. Common Stock,Technology,7,0.0382,1.0,-16.3,-11.3,39.11,20261030,50,20261120
+10,TWLO,Twilio Inc. Class A Common Stock,Technology,17,0.043,1.92,-18.5,-32.1,172.1,20261030,50,20261120

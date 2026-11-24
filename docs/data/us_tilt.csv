@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRNA,Moderna  Inc. - Common Stock,Healthcare,12,0.0583,1.76,-12.7,-3.8,195.0,20261030,50,20261120
-2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,9,0.0552,1.21,-22.0,-45.3,122.28,20261030,50,20261120
-3,DELL,Dell Technologies Inc. Class C Common St,Technology,23,0.0564,1.7,-19.3,-38.6,278.02,20261030,50,20261120
-4,ASX,ASE Technology Holding Co.  Ltd. America,Technology,10,0.0524,1.18,-26.1,-30.4,26.27,20261030,50,20261120
-5,OKTA,Okta  Inc. - Class A Common Stock,Technology,2,0.0573,1.94,4.7,-4.9,191.46,20261030,50,20261120
-6,STX,Seagate Technology Holdings PLC - Ordina,Technology,26,0.0499,1.44,-13.5,-28.8,457.01,20261030,50,20261120
-7,ALAB,Astera Labs  Inc. - Common Stock,Technology,27,0.0645,2.16,-18.7,-30.0,180.35,20261030,50,20261120
-8,AMD,Advanced Micro Devices  Inc. - Common St,Technology,4,0.0541,1.86,-20.5,-16.4,424.39,20261030,50,20261120
-9,STM,STMicroelectronics N.V. Common Stock,Technology,7,0.0382,1.0,-16.3,-11.3,39.11,20261030,50,20261120
-10,TWLO,Twilio Inc. Class A Common Stock,Technology,17,0.043,1.92,-18.5,-32.1,172.1,20261030,50,20261120
+1,ASX,ASE Technology Holding Co.  Ltd. America,Technology,12,0.059,1.18,-2.8,-17.6,31.88,20261030,50,20261123
+2,MRVL,Marvell Technology  Inc. - Common Stock,Technology,8,0.0599,1.21,-0.4,-36.7,144.74,20261030,50,20261123
+3,DELL,Dell Technologies Inc. Class C Common St,Technology,30,0.062,1.7,4.5,-26.6,334.91,20261030,50,20261123
+4,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,35,0.0607,1.84,4.9,-2.1,231.3,20261030,50,20261123
+5,STX,Seagate Technology Holdings PLC - Ordina,Technology,38,0.0529,1.44,4.2,-17.5,520.1,20261030,50,20261123
+6,ALAB,Astera Labs  Inc. - Common Stock,Technology,36,0.071,2.16,9.8,-13.6,222.12,20261030,50,20261123
+7,MRNA,Moderna  Inc. - Common Stock,Healthcare,15,0.0566,1.76,-1.5,6.0,212.08,20261030,50,20261123
+8,OKTA,Okta  Inc. - Class A Common Stock,Technology,1,0.058,1.94,15.7,-3.2,206.28,20261030,50,20261123
+9,AMD,Advanced Micro Devices  Inc. - Common St,Technology,5,0.0544,1.86,-10.1,-12.3,453.46,20261030,50,20261123
+10,STM,STMicroelectronics N.V. Common Stock,Technology,7,0.0408,1.0,-2.3,-1.2,43.49,20261030,50,20261123

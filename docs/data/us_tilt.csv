@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,15,0.0608,1.21,-11.5,-43.7,131.57,20261030,50,20261124
-2,ASX,ASE Technology Holding Co.  Ltd. America,Technology,19,0.0598,1.18,-7.9,-26.5,29.33,20261030,50,20261124
-3,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,38,0.0629,1.84,-11.9,-17.8,200.2,20261030,50,20261124
-4,MRNA,Moderna  Inc. - Common Stock,Healthcare,8,0.0566,1.76,10.0,14.3,227.38,20261030,50,20261124
-5,OKTA,Okta  Inc. - Class A Common Stock,Technology,1,0.0582,1.94,13.5,-9.9,198.12,20261030,50,20261124
-6,AMD,Advanced Micro Devices  Inc. - Common St,Technology,9,0.0556,1.86,-17.9,-22.2,413.27,20261030,50,20261124
-7,GMAB,Genmab A/S - American Depositary Shares,Healthcare,33,0.0448,1.24,8.9,26.6,56.57,20261030,50,20261124
-8,STM,STMicroelectronics N.V. Common Stock,Technology,6,0.0422,1.0,-10.2,-12.1,39.7,20261030,50,20261124
-9,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,44,0.0389,1.71,3.1,-9.6,80.21,20261030,50,20261124
-10,TWLO,Twilio Inc. Class A Common Stock,Technology,34,0.044,1.92,-7.0,-31.5,180.61,20261030,50,20261124
+1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,18,0.0608,1.21,-10.0,-46.2,130.93,20261030,50,20261125
+2,ASX,ASE Technology Holding Co.  Ltd. America,Technology,19,0.0596,1.18,-9.3,-29.9,29.49,20261030,50,20261125
+3,MRNA,Moderna  Inc. - Common Stock,Healthcare,9,0.0564,1.76,12.2,6.2,220.84,20261030,50,20261125
+4,AMD,Advanced Micro Devices  Inc. - Common St,Technology,11,0.0556,1.86,-23.4,-27.5,406.03,20261030,50,20261125
+5,GMAB,Genmab A/S - American Depositary Shares,Healthcare,50,0.0448,1.24,11.4,27.2,56.8,20261030,50,20261125
+6,STM,STMicroelectronics N.V. Common Stock,Technology,5,0.042,1.0,-11.5,-18.4,39.73,20261030,50,20261125
+7,OKTA,Okta  Inc. - Class A Common Stock,Technology,1,0.0461,1.94,3.1,-10.7,201.77,20261030,50,20261125
+8,TWLO,Twilio Inc. Class A Common Stock,Technology,40,0.0433,1.92,-7.7,-29.0,180.79,20261030,50,20261125
+9,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,41,0.0382,1.71,7.6,-4.1,81.59,20261030,50,20261125
+10,ENTG,Entegris  Inc. - Common Stock,Technology,12,0.0517,2.56,-10.7,-14.4,128.37,20261030,50,20261125

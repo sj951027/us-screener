@@ -1,11 +1,11 @@
 ﻿rank,symbol,name,sector,mus_rank,rv63,dtc,ret_1w_pct,ret_1m_pct,close,settle,n_pool,date
-1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,18,0.0608,1.21,-10.0,-46.2,130.93,20261030,50,20261125
-2,ASX,ASE Technology Holding Co.  Ltd. America,Technology,19,0.0596,1.18,-9.3,-29.9,29.49,20261030,50,20261125
-3,MRNA,Moderna  Inc. - Common Stock,Healthcare,9,0.0564,1.76,12.2,6.2,220.84,20261030,50,20261125
-4,AMD,Advanced Micro Devices  Inc. - Common St,Technology,11,0.0556,1.86,-23.4,-27.5,406.03,20261030,50,20261125
-5,GMAB,Genmab A/S - American Depositary Shares,Healthcare,50,0.0448,1.24,11.4,27.2,56.8,20261030,50,20261125
-6,STM,STMicroelectronics N.V. Common Stock,Technology,5,0.042,1.0,-11.5,-18.4,39.73,20261030,50,20261125
-7,OKTA,Okta  Inc. - Class A Common Stock,Technology,1,0.0461,1.94,3.1,-10.7,201.77,20261030,50,20261125
-8,TWLO,Twilio Inc. Class A Common Stock,Technology,40,0.0433,1.92,-7.7,-29.0,180.79,20261030,50,20261125
-9,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,41,0.0382,1.71,7.6,-4.1,81.59,20261030,50,20261125
-10,ENTG,Entegris  Inc. - Common Stock,Technology,12,0.0517,2.56,-10.7,-14.4,128.37,20261030,50,20261125
+1,MRVL,Marvell Technology  Inc. - Common Stock,Technology,13,0.0604,1.0,1.5,-44.2,140.54,20261113,50,20261127
+2,ASX,ASE Technology Holding Co.  Ltd. America,Technology,15,0.06,1.0,2.8,-28.6,31.34,20261113,50,20261127
+3,MTSI,MACOM Technology Solutions Holdings  Inc,Technology,42,0.063,1.19,-4.1,-19.7,209.55,20261113,50,20261127
+4,AMD,Advanced Micro Devices  Inc. - Common St,Technology,7,0.0559,1.03,-13.2,-26.6,424.54,20261113,50,20261127
+5,VIAV,Viavi Solutions Inc. - Common Stock,Technology,50,0.0584,1.41,-4.2,-18.3,28.15,20261113,50,20261127
+6,OKTA,Okta  Inc. - Class A Common Stock,Technology,1,0.0459,1.02,0.3,-6.8,207.46,20261113,50,20261127
+7,STM,STMicroelectronics N.V. Common Stock,Technology,4,0.042,1.06,-6.3,-15.5,41.01,20261113,50,20261127
+8,ENTG,Entegris  Inc. - Common Stock,Technology,11,0.0514,2.06,-1.6,-14.6,135.99,20261113,50,20261127
+9,GMAB,Genmab A/S - American Depositary Shares,Healthcare,19,0.0446,2.03,12.5,0.8,57.75,20261113,50,20261127
+10,ECO,Okeanis Eco Tankers Corp. Common Stock,Industrials,45,0.0382,1.39,6.7,-10.6,81.12,20261113,50,20261127

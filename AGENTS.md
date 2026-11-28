@@ -42,7 +42,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
 
 ## 운영 사실
 
-- 실행은 GitHub Actions(cron 03:17 UTC 화~토 = 전날 ET 세션, v11), 노트북 불필요. 최신 DB 정본은
+- 실행은 GitHub Actions(cron 02:17 UTC 화~토 = 전날 ET 세션, v11·v25), 노트북 불필요. 최신 DB 정본은
   Release 자산(us-data.tar.gz):
   `https://github.com/sj951027/us-screener/releases/download/data-store/us-data.tar.gz`.
   로컬 폴더의 `_t_us-data.tar.gz` 등 사본은 구본일 수 있다.
@@ -133,7 +133,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
   in-sample 수치(+88.5%/74% 등)를 검증된 성과처럼 말하지 않는다.
 
 [운영 사실]
-- 실행은 GitHub Actions(cron 03:17 UTC 화~토 = 전날 ET 세션, v11), 노트북 불필요. 최신 DB 정본은
+- 실행은 GitHub Actions(cron 02:17 UTC 화~토 = 전날 ET 세션, v11·v25), 노트북 불필요. 최신 DB 정본은
   Release 자산(us-data.tar.gz) — 로컬 폴더는 구본일 수 있다.
 - 네트워크는 위 '네트워크(Codex 로컬 실행 기준)' 규칙을 따른다 — 수집기는 Actions 에 맡기고,
   러너 로그는 사용자에게 요청한다. "내가 돌렸다"고 말하지 않는다.

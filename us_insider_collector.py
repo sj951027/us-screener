@@ -49,6 +49,12 @@ DATA_DIR = Path(os.environ.get("US_DATA_DIR", "").strip() or (HERE / ".." / "us-
 DB = DATA_DIR / "us_fundamentals.db"
 URL = ("https://www.sec.gov/files/structureddata/data/"
        "insider-transactions-data-sets/{q}_form345.zip")
+# v24: SEC 가 2026q2 분부터 파일 경로를 바꿨다(…/structureddata/… → …/datastandardsinnovation/…, 목록 페이지 2026-11-26 확인).
+#   옛 경로만 보면 새 분기가 영원히 404('아직 미공개')로 보인다(실측: 09-29~11-25 매 실행 2026q2 404, 29분기에서 정지).
+#   옛 경로가 404 면 새 경로를 본다 — 둘 다 404 일 때만 미공개. 경로가 또 바뀌면 여기에 덧붙인다.
+URLS = (URL,
+        "https://www.sec.gov/files/datastandardsinnovation/data/"
+        "insider-transactions-data-sets/{q}_form345.zip")
 UA = {"User-Agent": os.environ.get(
     "SEC_USER_AGENT", "us-screener research (github.com/sj951027; seok5139@gmail.com)")}
 
@@ -242,9 +248,12 @@ def ensure_db():
 
 
 def load_quarter(con, session, quarter):
-    r = session.get(URL.format(q=quarter), headers=UA, timeout=180)
-    if r.status_code == 404:
-        return None            # 아직 미공개 분기(정상)
+    for url in URLS:           # v24: 경로 후보를 차례로 — 404 가 아닌 첫 응답을 쓴다
+        r = session.get(url.format(q=quarter), headers=UA, timeout=180)
+        if r.status_code != 404:
+            break
+    else:
+        return None            # 모든 경로 404 = 아직 미공개 분기(정상)
     r.raise_for_status()
     rows, err = parse_quarter_zip(r.content, quarter)
     if rows is None:

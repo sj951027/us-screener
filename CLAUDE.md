@@ -42,7 +42,7 @@ US_PROJECT_KNOWLEDGE.md가 이긴다.
 
 ## 운영 사실
 
-- 실행은 GitHub Actions(cron 03:17 UTC 화~토 = 전날 ET 세션, v11), 노트북 불필요. 최신 DB 정본은
+- 실행은 GitHub Actions(cron 02:17 UTC 화~토 = 전날 ET 세션, v11·v25), 노트북 불필요. 최신 DB 정본은
   Release 자산(us-data.tar.gz):
   `https://github.com/sj951027/us-screener/releases/download/data-store/us-data.tar.gz`.
   로컬 폴더의 `_t_us-data.tar.gz` 등 사본은 구본일 수 있다.
